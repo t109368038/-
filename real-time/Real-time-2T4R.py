@@ -10,7 +10,7 @@ import threading
 import time
 import sys
 import socket
-from scipy import signal
+
 
 
 # -----------------------------------------------
