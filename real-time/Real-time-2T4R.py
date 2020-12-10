@@ -1,4 +1,4 @@
-from tools.real_time_process_2t4r import UdpListener, DataProcessor
+from real_time_process_2t4r import UdpListener, DataProcessor
 from radar_config import SerialConfig
 from queue import Queue
 
@@ -10,7 +10,6 @@ import threading
 import time
 import sys
 import socket
-
 
 
 # -----------------------------------------------
