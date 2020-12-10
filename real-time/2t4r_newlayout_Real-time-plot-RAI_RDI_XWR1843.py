@@ -1,4 +1,4 @@
-from tools.real_time_process_2t4r import UdpListener, DataProcessor
+from tools.real_time_process import UdpListener, DataProcessor
 from radar_config import SerialConfig
 from queue import Queue
 
@@ -181,7 +181,8 @@ for k in range(5):
     print('receive command:', msg.hex())
 
 collector = UdpListener('Listener', BinData, frame_length, address, buff_size)
-processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData,"1130")
+# processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData,"1130")
+processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData)
 collector.start()
 processor.start()
 plotIMAGE = threading.Thread(target=plot(config))

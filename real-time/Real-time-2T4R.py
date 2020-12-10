@@ -1,15 +1,20 @@
-from real_time_process_2t4r import UdpListener, DataProcessor
+from tools.real_time_process_2t4r import UdpListener, DataProcessor
 from radar_config import SerialConfig
 from queue import Queue
+
 import pyqtgraph as pg
 import pyqtgraph.ptime as ptime
-from pyqtgraph.Qt import QtCore, QtGui
+from pyqtgraph.Qt import QtCore, QtGui,QtWidgets
 import numpy as np
 import threading
 import time
 import sys
 import socket
 
+# -----------------------------------------------
+from app.app import Ui_MainWindow
+# -----------------------------------------------
+config = '../config/IWR1843_cfg_2t4r.cfg'
 
 def send_cmd(code):
     # command code list
@@ -67,32 +72,46 @@ def send_cmd(code):
 
 
 def update_figure():
-    global img_rdi, img_rai, updateTime, view_text, count
-    count += 1
-    img_rdi.setImage(RDIData.get()[:, :, 0].T)
-    img_rai.setImage(np.flip(np.fft.fftshift(RAIData.get(), axes=0).sum(0).T, axis=0))
-    view_text.setText("Frame No: " + str(count), color=(128, 150, 0))
+    global img_rdi, img_rai, updateTime,ix
+    if ix == 0:
+        firtfile = BinData.get()
+        print("size is %d "%len(firtfile))
+        ix+=1
+    img_rdi.setImage(RDIData.get()[:, :, 0].T, axis=1)
+    img_rai.setImage(np.fliplr(RAIData.get()[0, :, :]).T)
     QtCore.QTimer.singleShot(1, update_figure)
     now = ptime.time()
     updateTime = now
 
+def openradar():
+    global tt
+    tt = SerialConfig(name='ConnectRadar', CLIPort='com3', BaudRate=115200)
+    tt.StopRadar()
+    tt.SendConfig('../config/IWR1843_cfg_2t4r.cfg')
+    update_figure()
 
-def plot(cfg, port):
-    global img_rdi, img_rai, updateTime, view_text, count
-    count = 0
-    app = QtGui.QApplication([])
-    win = pg.GraphicsLayoutWidget(title="Real-Time Radar", size=(1600, 768))
-    win.show()
-    # view_text = win.addViewBox()
-    view_text = win.addLabel("2T4R Frame No: ", size='12pt',rowspan=1)
-    view_rdi = win.addViewBox()
-    view_rai = win.addViewBox()
+def plot(cfg):
+    global img_rdi, img_rai, updateTime,view_text, count
+    #---------------------------------------------------
+    app = QtWidgets.QApplication(sys.argv)
+    MainWindow = QtWidgets.QMainWindow()
+    MainWindow.show()
+    ui = Ui_MainWindow()
+    ui.setupUi(MainWindow)
+    view_rdi =ui.graphicsView.addViewBox()
+    view_rai =ui.graphicsView_2.addViewBox()
+    starbtn = ui.pushButton_start
+    exitbtn = ui.pushButton_exit
+    #---------------------------------------------------
+
     # lock the aspect ratio so pixels are always square
     view_rdi.setAspectLocked(True)
     view_rai.setAspectLocked(True)
     img_rdi = pg.ImageItem(border='w')
     img_rai = pg.ImageItem(border='w')
-
+    pp = ui.graphicsView_2.addPlot(row=0, col=0)
+    pp.addItem(img_rai)
+    pp.setLabels(bottom='Angle', left='range')
     # Colormap
     position = np.arange(64)
     position = position / 64
@@ -124,21 +143,20 @@ def plot(cfg, port):
     img_rdi.setLookupTable(lookup_table)
     img_rai.setLookupTable(lookup_table)
     view_rdi.addItem(img_rdi)
-    view_rai.addItem(img_rai)
+    # view_rai.addItem(img_rai)
     # Set initial view bounds
-    view_rdi.setRange(QtCore.QRectF(0, 0, 128, 64))
-    view_rai.setRange(QtCore.QRectF(0, 0, 64, 120))
-
+    view_rdi.setRange(QtCore.QRectF(0, 0, 128, 80))
+    view_rai.setRange(QtCore.QRectF(13, 0, 155, 80))
     updateTime = ptime.time()
-    tt = SerialConfig(name='ConnectRadar', CLIPort=port, BaudRate=115200)
-    tt.StopRadar()
-    tt.SendConfig(cfg)
 
-    update_figure()
-    QtGui.QApplication.instance().exec_()
+    starbtn.clicked.connect(openradar)
+    exitbtn.clicked.connect(app.instance().exit)
+    app.instance().exec_()
     tt.StopRadar()
 
 
+global ix
+ix = 0
 # Queue for access data
 BinData = Queue()
 RDIData = Queue()
@@ -170,18 +188,17 @@ for k in range(5):
     print('receive command:', msg.hex())
 
 collector = UdpListener('Listener', BinData, frame_length, address, buff_size)
-processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, '1130')
-config = '../config/IWR1843_cfg_2t4r.cfg'
+processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData,"1130")
 collector.start()
 processor.start()
-
-plotIMAGE = threading.Thread(target=plot(config, port='COM15'))
+plotIMAGE = threading.Thread(target=plot(config))
 plotIMAGE.start()
 
 sockConfig.sendto(send_cmd('6'), FPGA_address_cfg)
 sockConfig.close()
 collector.join(timeout=1)
 processor.join(timeout=1)
+
 
 print("Program close")
 sys.exit()
