@@ -4,7 +4,7 @@ from queue import Queue
 
 import pyqtgraph as pg
 import pyqtgraph.ptime as ptime
-from pyqtgraph.Qt import QtCore, QtGui,QtWidgets
+from pyqtgraph.Qt import QtCore, QtGui, QtWidgets
 import numpy as np
 import threading
 import time
