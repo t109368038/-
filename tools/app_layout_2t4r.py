@@ -15,7 +15,7 @@ class Ui_MainWindow(object):
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(1290, 720)
+        MainWindow.resize(1920, 720)
         font = QtGui.QFont()
         font.setFamily("MS Gothic")
         font.setPointSize(10)
@@ -29,6 +29,9 @@ class Ui_MainWindow(object):
         self.graphicsView_2 = GraphicsLayoutWidget(self.centralwidget)
         self.graphicsView_2.setGeometry(QtCore.QRect(660, 60, 600, 600))
         self.graphicsView_2.setObjectName("graphicsView_2")
+        self.graphicsView_3 = GraphicsLayoutWidget(self.centralwidget)
+        self.graphicsView_3.setGeometry(QtCore.QRect(1290, 60, 600, 600))
+        self.graphicsView_3.setObjectName("graphicsView_3")
         self.label = QtWidgets.QLabel(self.centralwidget)
         self.label.setGeometry(QtCore.QRect(210, 20, 200, 30))
         font = QtGui.QFont()

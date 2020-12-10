@@ -18,73 +18,73 @@ from app_layout_2t4r import Ui_MainWindow
 # -----------------------------------------------
 config = '../config/IWR1843_cfg_2t4r.cfg'
 
-class CA_CFAR():
-    """
-    Description:
-    ------------
-        Cell Averaging - Constant False Alarm Rate algorithm
-        Performs an automatic detection on the input range-Doppler matrix with an adaptive thresholding.
-        The threshold level is determined for each cell in the range-Doppler map with the estimation
-        of the power level of its surrounding noise. The average power of the noise is estimated on a
-        rectangular window, that is defined around the CUT (Cell Under Test). In order the mitigate the effect
-        of the target reflection energy spreading some cells are left out from the calculation in the immediate
-        vicinity of the CUT. These cells are the guard cells.
-        The size of the estimation window and guard window can be set with the win_param parameter.
-    Implementation notes:
-    ---------------------
-        Implementation based on https://github.com/petotamas/APRiL
-    Parameters:
-    -----------
-    :param win_param: Parameters of the noise power estimation window
-                      [Est. window length, Est. window width, Guard window length, Guard window width]
-    :param threshold: Threshold level above the estimated average noise power
-    :type win_param: python list with 4 elements
-    :type threshold: float
-    Return values:
-    --------------
-    """
-
-    def __init__(self, win_param, threshold, rd_size):
-        win_width = win_param[0]
-        win_height = win_param[1]
-        guard_width = win_param[2]
-        guard_height = win_param[3]
-
-        # Create window mask with guard cells
-        self.mask = np.ones((2 * win_height + 1, 2 * win_width + 1), dtype=bool)
-        self.mask[win_height - guard_height:win_height + 1 + guard_height, win_width - guard_width:win_width + 1 + guard_width] = 0
-
-        # Convert threshold value
-        self.threshold = 10 ** (threshold / 10)
-
-        # Number cells within window around CUT; used for averaging operation.
-        self.num_valid_cells_in_window = signal.convolve2d(np.ones(rd_size, dtype=float), self.mask, mode='same')
-
-    def __call__(self, rd_matrix):
-        """
-        Description:
-        ------------
-            Performs the automatic detection on the input range-Doppler matrix.
-        Implementation notes:
-        ---------------------
-        Parameters:
-        -----------
-        :param rd_matrix: Range-Doppler map on which the automatic detection should be performed
-        :type rd_matrix: R x D complex numpy array
-        Return values:
-        --------------
-        :return hit_matrix: Calculated hit matrix
-        """
-        # Convert range-Doppler map values to power
-        rd_matrix = np.abs(rd_matrix) ** 2
-
-        # Perform detection
-        rd_windowed_sum = signal.convolve2d(rd_matrix, self.mask, mode='same')
-        rd_avg_noise_power = rd_windowed_sum / self.num_valid_cells_in_window
-        rd_snr = rd_matrix / rd_avg_noise_power
-        hit_matrix = rd_snr > self.threshold
-
-        return hit_matrix
+# class CA_CFAR():
+#     """
+#     Description:
+#     ------------
+#         Cell Averaging - Constant False Alarm Rate algorithm
+#         Performs an automatic detection on the input range-Doppler matrix with an adaptive thresholding.
+#         The threshold level is determined for each cell in the range-Doppler map with the estimation
+#         of the power level of its surrounding noise. The average power of the noise is estimated on a
+#         rectangular window, that is defined around the CUT (Cell Under Test). In order the mitigate the effect
+#         of the target reflection energy spreading some cells are left out from the calculation in the immediate
+#         vicinity of the CUT. These cells are the guard cells.
+#         The size of the estimation window and guard window can be set with the win_param parameter.
+#     Implementation notes:
+#     ---------------------
+#         Implementation based on https://github.com/petotamas/APRiL
+#     Parameters:
+#     -----------
+#     :param win_param: Parameters of the noise power estimation window
+#                       [Est. window length, Est. window width, Guard window length, Guard window width]
+#     :param threshold: Threshold level above the estimated average noise power
+#     :type win_param: python list with 4 elements
+#     :type threshold: float
+#     Return values:
+#     --------------
+#     """
+#
+#     def __init__(self, win_param, threshold, rd_size):
+#         win_width = win_param[0]
+#         win_height = win_param[1]
+#         guard_width = win_param[2]
+#         guard_height = win_param[3]
+#
+#         # Create window mask with guard cells
+#         self.mask = np.ones((2 * win_height + 1, 2 * win_width + 1), dtype=bool)
+#         self.mask[win_height - guard_height:win_height + 1 + guard_height, win_width - guard_width:win_width + 1 + guard_width] = 0
+#
+#         # Convert threshold value
+#         self.threshold = 10 ** (threshold / 10)
+#
+#         # Number cells within window around CUT; used for averaging operation.
+#         self.num_valid_cells_in_window = signal.convolve2d(np.ones(rd_size, dtype=float), self.mask, mode='same')
+#
+#     def __call__(self, rd_matrix):
+#         """
+#         Description:
+#         ------------
+#             Performs the automatic detection on the input range-Doppler matrix.
+#         Implementation notes:
+#         ---------------------
+#         Parameters:
+#         -----------
+#         :param rd_matrix: Range-Doppler map on which the automatic detection should be performed
+#         :type rd_matrix: R x D complex numpy array
+#         Return values:
+#         --------------
+#         :return hit_matrix: Calculated hit matrix
+#         """
+#         # Convert range-Doppler map values to power
+#         rd_matrix = np.abs(rd_matrix) ** 2
+#
+#         # Perform detection
+#         rd_windowed_sum = signal.convolve2d(rd_matrix, self.mask, mode='same')
+#         rd_avg_noise_power = rd_windowed_sum / self.num_valid_cells_in_window
+#         rd_snr = rd_matrix / rd_avg_noise_power
+#         hit_matrix = rd_snr > self.threshold
+#
+#         return hit_matrix
 
 def send_cmd(code):
     # command code list
@@ -142,27 +142,29 @@ def send_cmd(code):
 
 
 def update_figure():
-    global img_rdi, img_rai, updateTime
+    global img_rdi, img_rai, updateTime,ang_cuv
     win_param = [8, 8, 3, 3]
-    cfar_rai = CA_CFAR(win_param, threshold=2.5, rd_size=[64, 181])
+    # cfar_rai = CA_CFAR(win_param, threshold=2.5, rd_size=[64, 181])
     img_rdi.setImage(np.abs(RDIData.get()[:, :, 0].T))
     # img_rai.setImage(cfar_rai(np.fliplr(RAIData.get()[0, :, :])).T)
-    img_rai.setImage(np.fliplr(np.flip(RAIData.get()[0, :, :], axis=0)).T)
 
-    # angCurve.plot((np.fliplr(np.flip(RAIData.get()[0, :, :], axis=0)).T)[:, 10], clear=True)
+    xx = RAIData.get()[0, :, :]
+    img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T)
+    # angCurve.plot((np.fliplr(np.flip(xx, axis=0)).T)[:, 10:12].sum(1), clear=True)
+    ang_cuv.setData((np.fliplr(np.flip(xx, axis=0)).T)[:, 10:12].sum(1), clear=True)
     QtCore.QTimer.singleShot(1, update_figure)
     now = ptime.time()
     updateTime = now
 
 def openradar():
     global tt
-    tt = SerialConfig(name='ConnectRadar', CLIPort='COM4', BaudRate=115200)
+    tt = SerialConfig(name='ConnectRadar', CLIPort='COM3', BaudRate=115200)
     tt.StopRadar()
-    tt.SendConfig('../config/IWR1843_cfg_2t4r.cfg')
+    tt.SendConfig('../radar_config/IWR1843_cfg_2t4r.cfg')
     update_figure()
 
 def plot(cfg):
-    global img_rdi, img_rai, updateTime,view_text, count, angCurve
+    global img_rdi, img_rai, updateTime,view_text, count, angCurve,ang_cuv
     #---------------------------------------------------
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
@@ -173,6 +175,7 @@ def plot(cfg):
     ui.setupUi(MainWindow)
     view_rdi =ui.graphicsView.addViewBox()
     view_rai =ui.graphicsView_2.addViewBox()
+    view_angCurve =ui.graphicsView_3.addViewBox()
     starbtn = ui.pushButton_start
     exitbtn = ui.pushButton_exit
     #---------------------------------------------------
@@ -182,6 +185,7 @@ def plot(cfg):
     view_rai.setAspectLocked(True)
     img_rdi = pg.ImageItem(border='w')
     img_rai = pg.ImageItem(border='w')
+    ang_cuv = pg.PlotDataItem(tmp_data, pen='r')
     # Colormap
     position = np.arange(64)
     position = position / 64
@@ -214,6 +218,7 @@ def plot(cfg):
     img_rai.setLookupTable(lookup_table)
     view_rdi.addItem(img_rdi)
     view_rai.addItem(img_rai)
+    view_angCurve.addItem(ang_cuv)
     # Set initial view bounds
     view_rdi.setRange(QtCore.QRectF(30, 0, 64, 80))
     view_rai.setRange(QtCore.QRectF(15, 0, 140, 80))
