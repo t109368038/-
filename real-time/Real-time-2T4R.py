@@ -11,11 +11,12 @@ import time
 import sys
 import socket
 
-
 # -----------------------------------------------
 from app_layout_2t4r import Ui_MainWindow
+
 # -----------------------------------------------
 config = '../config/IWR1843_cfg_2t4r.cfg'
+
 
 # class CA_CFAR():
 #     """
@@ -141,7 +142,7 @@ def send_cmd(code):
 
 
 def update_figure():
-    global img_rdi, img_rai, updateTime,ang_cuv
+    global img_rdi, img_rai, updateTime, ang_cuv
     win_param = [8, 8, 3, 3]
     # cfar_rai = CA_CFAR(win_param, threshold=2.5, rd_size=[64, 181])
     img_rdi.setImage(np.abs(RDIData.get()[:, :, 0].T))
@@ -150,10 +151,11 @@ def update_figure():
     xx = RAIData.get()[0, :, :]
     img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T)
     # angCurve.plot((np.fliplr(np.flip(xx, axis=0)).T)[:, 10:12].sum(1), clear=True)
-    ang_cuv.setData((np.fliplr(np.flip(xx, axis=0)).T)[:, 10:12].sum(1), clear=True)
+    ang_cuv.setData(np.fliplr(np.flip(xx, axis=0)).T[:, 10:12].sum(1), clear=True)
     QtCore.QTimer.singleShot(1, update_figure)
     now = ptime.time()
     updateTime = now
+
 
 def openradar():
     global tt
@@ -162,9 +164,10 @@ def openradar():
     tt.SendConfig('../radar_config/IWR1843_cfg_2t4r.cfg')
     update_figure()
 
+
 def plot(cfg):
-    global img_rdi, img_rai, updateTime,view_text, count, angCurve,ang_cuv
-    #---------------------------------------------------
+    global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv
+    # ---------------------------------------------------
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
     MainWindow.show()
@@ -172,12 +175,12 @@ def plot(cfg):
     # angCurve = pg.plot(tmp_data, pen='r')
     ui = Ui_MainWindow()
     ui.setupUi(MainWindow)
-    view_rdi =ui.graphicsView.addViewBox()
-    view_rai =ui.graphicsView_2.addViewBox()
-    view_angCurve =ui.graphicsView_3.addViewBox()
+    view_rdi = ui.graphicsView.addViewBox()
+    view_rai = ui.graphicsView_2.addViewBox()
+    view_angCurve = ui.graphicsView_3.addViewBox()
     starbtn = ui.pushButton_start
     exitbtn = ui.pushButton_exit
-    #---------------------------------------------------
+    # ---------------------------------------------------
 
     # lock the aspect ratio so pixels are always square
     view_rdi.setAspectLocked(True)
@@ -229,7 +232,6 @@ def plot(cfg):
     tt.StopRadar()
 
 
-
 # Queue for access data
 BinData = Queue()
 RDIData = Queue()
@@ -271,7 +273,6 @@ sockConfig.sendto(send_cmd('6'), FPGA_address_cfg)
 sockConfig.close()
 collector.join(timeout=1)
 processor.join(timeout=1)
-
 
 print("Program close")
 sys.exit()
