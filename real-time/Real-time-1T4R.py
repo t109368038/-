@@ -1,4 +1,4 @@
-from real_time_process_2t4r import UdpListener, DataProcessor
+from real_time_process_1t4r import UdpListener, DataProcessor
 from radar_config import SerialConfig
 from queue import Queue
 
@@ -15,7 +15,7 @@ import socket
 from app_layout_2t4r import Ui_MainWindow
 
 # -----------------------------------------------
-config = '../config/IWR1843_cfg_2t4r.cfg'
+config = '../config/IWR1843_cfg_1t4r.cfg'
 
 
 # class CA_CFAR():
