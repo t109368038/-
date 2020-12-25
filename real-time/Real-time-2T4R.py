@@ -159,7 +159,7 @@ def update_figure():
 
 def openradar():
     global tt
-    tt = SerialConfig(name='ConnectRadar', CLIPort='COM19', BaudRate=115200)
+    tt = SerialConfig(name='ConnectRadar', CLIPort='COM24', BaudRate=115200)
     tt.StopRadar()
     tt.SendConfig('../radar_config/IWR6843_cfg_2t4r.cfg')
     update_figure()
