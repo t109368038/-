@@ -113,6 +113,7 @@ class DataProcessor(th.Thread):
             frame_count += 1
             rdi_raw, rdi = DSP_2t4r.Range_Doppler(data, mode=2, padding_size=[128, 64])
             # rai = DSP_2t4r.Range_Angle(data, mode=1, padding_size=[128, 64, 32])
+            # ===============beamforming===============
             # print(np.shape(rdi_raw))
             rdi_raw = rdi_raw.reshape([-1, 4])
             # print(np.shape(rdi_raw))
@@ -123,6 +124,7 @@ class DataProcessor(th.Thread):
             # rai = np.flip(np.abs(rai), axis=1)
             # rai = np.flip(rai, axis=1)
             rai = np.abs(rai)
+            # ===============beamforming===============
             # np.save('../data/Real_time_data/' + self.filename + 'Frame_' + str(frame_count), data)
 
             self.rdi_queue.put(rdi)
