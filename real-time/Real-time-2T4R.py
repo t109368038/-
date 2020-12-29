@@ -1,20 +1,91 @@
-from tools.real_time_process_2t4r import UdpListener, DataProcessor
+from scipy import signal
+from real_time_process_2t4r import UdpListener, DataProcessor
 from radar_config import SerialConfig
 from queue import Queue
 
 import pyqtgraph as pg
 import pyqtgraph.ptime as ptime
-from pyqtgraph.Qt import QtCore, QtGui,QtWidgets
+from pyqtgraph.Qt import QtCore, QtGui, QtWidgets
 import numpy as np
 import threading
 import time
 import sys
 import socket
+import scipy
+# -----------------------------------------------
+from app.app_2t4r import Ui_MainWindow
 
 # -----------------------------------------------
-from app.app import Ui_MainWindow
-# -----------------------------------------------
 config = '../config/IWR1843_cfg_2t4r.cfg'
+
+
+class CA_CFAR():
+    """
+    Description:
+    ------------
+        Cell Averaging - Constant False Alarm Rate algorithm
+        Performs an automatic detection on the input range-Doppler matrix with an adaptive thresholding.
+        The threshold level is determined for each cell in the range-Doppler map with the estimation
+        of the power level of its surrounding noise. The average power of the noise is estimated on a
+        rectangular window, that is defined around the CUT (Cell Under Test). In order the mitigate the effect
+        of the target reflection energy spreading some cells are left out from the calculation in the immediate
+        vicinity of the CUT. These cells are the guard cells.
+        The size of the estimation window and guard window can be set with the win_param parameter.
+    Implementation notes:
+    ---------------------
+        Implementation based on https://github.com/petotamas/APRiL
+    Parameters:
+    -----------
+    :param win_param: Parameters of the noise power estimation window
+                      [Est. window length, Est. window width, Guard window length, Guard window width]
+    :param threshold: Threshold level above the estimated average noise power
+    :type win_param: python list with 4 elements
+    :type threshold: float
+    Return values:
+    --------------
+    """
+
+    def __init__(self, win_param, threshold, rd_size):
+        win_width = win_param[0]
+        win_height = win_param[1]
+        guard_width = win_param[2]
+        guard_height = win_param[3]
+
+        # Create window mask with guard cells
+        self.mask = np.ones((2 * win_height + 1, 2 * win_width + 1), dtype=bool)
+        self.mask[win_height - guard_height:win_height + 1 + guard_height, win_width - guard_width:win_width + 1 + guard_width] = 0
+
+        # Convert threshold value
+        self.threshold = 10 ** (threshold / 10)
+
+        # Number cells within window around CUT; used for averaging operation.
+        self.num_valid_cells_in_window = signal.convolve2d(np.ones(rd_size, dtype=float), self.mask, mode='same')
+
+    def __call__(self, rd_matrix):
+        """
+        Description:
+        ------------
+            Performs the automatic detection on the input range-Doppler matrix.
+        Implementation notes:
+        ---------------------
+        Parameters:
+        -----------
+        :param rd_matrix: Range-Doppler map on which the automatic detection should be performed
+        :type rd_matrix: R x D complex numpy array
+        Return values:
+        --------------
+        :return hit_matrix: Calculated hit matrix
+        """
+        # Convert range-Doppler map values to power
+        rd_matrix = np.abs(rd_matrix) ** 2
+
+        # Perform detection
+        rd_windowed_sum = signal.convolve2d(rd_matrix, self.mask, mode='same')
+        rd_avg_noise_power = rd_windowed_sum / self.num_valid_cells_in_window
+        rd_snr = rd_matrix / rd_avg_noise_power
+        hit_matrix = rd_snr > self.threshold
+
+        return hit_matrix
 
 def send_cmd(code):
     # command code list
@@ -72,46 +143,69 @@ def send_cmd(code):
 
 
 def update_figure():
-    global img_rdi, img_rai, updateTime,ix
-    if ix == 0:
-        firtfile = BinData.get()
-        print("size is %d "%len(firtfile))
-        ix+=1
-    img_rdi.setImage(RDIData.get()[:, :, 0].T, axis=1)
-    img_rai.setImage(np.fliplr(RAIData.get()[0, :, :]).T)
+    global img_rdi, img_rai, updateTime, ang_cuv,cuv ,number
+    # win_param = [8, 8, 3, 3]
+    # cfar = CA_CFAR(win_param, threshold=7, rd_size=[181,64])
+
+    img_rdi.setImage(np.abs(RDIData.get()[:, :, 0].T))
+    # img_rai.setImage(cfar_rai(np.fliplr(RAIData.get()[0, :, :])).T)
+
+    xx = np.rot90(RAIData.get()[0, :, :])
+    # xx = cfar(xx)
+    img_rai.setImage((xx))
+    # angCurve.plot((np.fliplr(np.flip(xx, axis=0)).T)[:, 10:12].sum(1), clear=True)
+    # test = np.flip(xx[1:5, :, :].sum(0), axis=0).T[:, 8:10].sum(1)
+    if number==2:
+        # ang_cuv.plot(xx[:,5:8].sum(1), clear=True)
+        ang_cuv.plot(cuv/10, clear=True)
+        cuv= np.zeros(181)
+        number = 0
+    else:
+        number+=1
+        cuv = xx[:, 5:8].sum(1) + cuv
+
     QtCore.QTimer.singleShot(1, update_figure)
+
     now = ptime.time()
     updateTime = now
 
+
 def openradar():
     global tt
-    tt = SerialConfig(name='ConnectRadar', CLIPort='com3', BaudRate=115200)
+    tt = SerialConfig(name='ConnectRadar', CLIPort='COM3', BaudRate=115200)
     tt.StopRadar()
     tt.SendConfig('../config/IWR1843_cfg_2t4r.cfg')
+    # tt.SendConfig('../config/IWR6843_cfg_2t4r.cfg')
     update_figure()
 
+
 def plot(cfg):
-    global img_rdi, img_rai, updateTime,view_text, count
-    #---------------------------------------------------
+    global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv
+    # ---------------------------------------------------
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
     MainWindow.show()
+    tmp_data = np.zeros(181)
+    # angCurve = pg.plot(tmp_data, pen='r')
     ui = Ui_MainWindow()
     ui.setupUi(MainWindow)
-    view_rdi =ui.graphicsView.addViewBox()
-    view_rai =ui.graphicsView_2.addViewBox()
+    view_rdi = ui.graphicsView.addViewBox()
+    view_rai = ui.graphicsView_2.addViewBox()
+    # view_angCurve = ui.graphicsView_3.addViewBox()
     starbtn = ui.pushButton_start
     exitbtn = ui.pushButton_exit
-    #---------------------------------------------------
+    # ---------------------------------------------------
 
     # lock the aspect ratio so pixels are always square
     view_rdi.setAspectLocked(True)
     view_rai.setAspectLocked(True)
     img_rdi = pg.ImageItem(border='w')
     img_rai = pg.ImageItem(border='w')
-    pp = ui.graphicsView_2.addPlot(row=0, col=0)
-    pp.addItem(img_rai)
-    pp.setLabels(bottom='Angle', left='range')
+    # ang_cuv = pg.PlotDataItem(tmp_data, pen='r')
+    ang_cuv =pg.PlotItem(border='w')
+    ui.graphicsView_3.addItem(ang_cuv)
+    ang_cuv.plot(tmp_data)
+    # ang_cuv.pixelPadding()
     # Colormap
     position = np.arange(64)
     position = position / 64
@@ -143,10 +237,11 @@ def plot(cfg):
     img_rdi.setLookupTable(lookup_table)
     img_rai.setLookupTable(lookup_table)
     view_rdi.addItem(img_rdi)
-    # view_rai.addItem(img_rai)
+    view_rai.addItem(img_rai)
+    # view_angCurve.addItem(ang_cuv)
     # Set initial view bounds
-    view_rdi.setRange(QtCore.QRectF(0, 0, 128, 80))
-    view_rai.setRange(QtCore.QRectF(13, 0, 155, 80))
+    view_rdi.setRange(QtCore.QRectF(30, 0, 64, 80))
+    view_rai.setRange(QtCore.QRectF(15, 0, 140, 80))
     updateTime = ptime.time()
 
     starbtn.clicked.connect(openradar)
@@ -155,9 +250,9 @@ def plot(cfg):
     tt.StopRadar()
 
 
-global ix
-ix = 0
 # Queue for access data
+cuv =np.zeros(181)
+number=0
 BinData = Queue()
 RDIData = Queue()
 RAIData = Queue()
@@ -188,7 +283,7 @@ for k in range(5):
     print('receive command:', msg.hex())
 
 collector = UdpListener('Listener', BinData, frame_length, address, buff_size)
-processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData,"1130")
+processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, "1130")
 collector.start()
 processor.start()
 plotIMAGE = threading.Thread(target=plot(config))
@@ -199,6 +294,6 @@ sockConfig.close()
 collector.join(timeout=1)
 processor.join(timeout=1)
 
-
 print("Program close")
 sys.exit()
+
