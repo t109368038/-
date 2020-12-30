@@ -146,11 +146,13 @@ def update_figure():
     global img_rdi, img_rai, updateTime, ang_cuv
     win_param = [8, 8, 3, 3]
     # cfar_rai = CA_CFAR(win_param, threshold=2.5, rd_size=[64, 181])
-    img_rdi.setImage(np.abs(RDIData.get()[:, :, 0].T))
+    img_rdi.setImage(RDIData.get()[:, :, 0].T, levels=[0, 2.6e4])
+    # img_rdi.setImage(np.abs(RDIData.get()[:, :, 0].T))
     # img_rai.setImage(cfar_rai(np.fliplr(RAIData.get()[0, :, :])).T)
 
     xx = RAIData.get()[:, :, :].sum(0)
-    img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T)
+    img_rai.setImage(np.rot90(xx, -1), levels=[1.2e4, 4e6])
+    # img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T, levels=[1.2e4, 4e6])
     # angCurve.plot((np.fliplr(np.flip(xx, axis=0)).T)[:, 10:12].sum(1), clear=True)
     ang_cuv.setData(np.fliplr(np.flip(xx, axis=0)).T[:, 10:12].sum(1), clear=True)
     QtCore.QTimer.singleShot(1, update_figure)

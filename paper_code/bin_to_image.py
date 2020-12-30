@@ -1,5 +1,5 @@
 import numpy as np
-import DSP
+import DSP_2t4r
 import os
 from read_binfile import read_bin_file
 
