@@ -15,7 +15,7 @@ import socket
 from app_layout_2t4r import Ui_MainWindow
 
 # -----------------------------------------------
-config = '../config/IWR1843_cfg_1t4r.cfg'
+config = '../radar_config/IWR1843_cfg_1t4r.cfg'
 
 
 # class CA_CFAR():
@@ -161,11 +161,11 @@ def openradar():
     global tt
     tt = SerialConfig(name='ConnectRadar', CLIPort='COM4', BaudRate=115200)
     tt.StopRadar()
-    tt.SendConfig('../radar_config/IWR1843_cfg_2t4r.cfg')
+    tt.SendConfig(config)
     update_figure()
 
 
-def plot(cfg):
+def plot():
     global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv
     # ---------------------------------------------------
     app = QtWidgets.QApplication(sys.argv)
@@ -222,8 +222,8 @@ def plot(cfg):
     view_rai.addItem(img_rai)
     view_angCurve.addItem(ang_cuv)
     # Set initial view bounds
-    view_rdi.setRange(QtCore.QRectF(30, 0, 64, 80))
-    view_rai.setRange(QtCore.QRectF(15, 0, 140, 80))
+    view_rdi.setRange(QtCore.QRectF(-5, 0, 140, 80))
+    view_rai.setRange(QtCore.QRectF(10, 0, 160, 80))
     updateTime = ptime.time()
 
     starbtn.clicked.connect(openradar)
@@ -239,7 +239,7 @@ RAIData = Queue()
 # Radar config
 adc_sample = 64
 chirp = 32
-tx_num = 2
+tx_num = 1
 rx_num = 4
 radar_config = [adc_sample, chirp, tx_num, rx_num]
 frame_length = adc_sample * chirp * tx_num * rx_num * 2
@@ -266,7 +266,7 @@ collector = UdpListener('Listener', BinData, frame_length, address, buff_size)
 processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, "1130")
 collector.start()
 processor.start()
-plotIMAGE = threading.Thread(target=plot(config))
+plotIMAGE = threading.Thread(target=plot())
 plotIMAGE.start()
 
 sockConfig.sendto(send_cmd('6'), FPGA_address_cfg)
