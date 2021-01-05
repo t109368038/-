@@ -16,7 +16,7 @@ import socket
 from app_layout_2t4r import Ui_MainWindow
 
 # -----------------------------------------------
-config = '../config/IWR1843_cfg_2t4r.cfg'
+config = '../radar_config/IWR1843_cfg_2t4r.cfg'
 
 
 # class CA_CFAR():
@@ -162,9 +162,9 @@ def update_figure():
 
 def openradar():
     global tt
-    tt = SerialConfig(name='ConnectRadar', CLIPort='COM24', BaudRate=115200)
+    tt = SerialConfig(name='ConnectRadar', CLIPort='COM4', BaudRate=115200)
     tt.StopRadar()
-    tt.SendConfig('../radar_config/IWR6843_cfg_2t4r.cfg')
+    tt.SendConfig(config)
     update_figure()
 
 
