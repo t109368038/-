@@ -151,7 +151,8 @@ def update_figure():
     # img_rai.setImage(cfar_rai(np.fliplr(RAIData.get()[0, :, :])).T)
 
     xx = RAIData.get()[:, :, :].sum(0)
-    img_rai.setImage(np.rot90(xx, -1), levels=[1.2e4, 4e6])
+    img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T, levels=[1.2e4, 4e6])
+
     # img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T, levels=[1.2e4, 4e6])
     # angCurve.plot((np.fliplr(np.flip(xx, axis=0)).T)[:, 10:12].sum(1), clear=True)
     ang_cuv.setData(np.fliplr(np.flip(xx, axis=0)).T[:, 10:12].sum(1), clear=True)
@@ -168,7 +169,7 @@ def openradar():
     update_figure()
 
 
-def plot(cfg):
+def plot():
     global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv
     # ---------------------------------------------------
     app = QtWidgets.QApplication(sys.argv)
@@ -225,8 +226,8 @@ def plot(cfg):
     view_rai.addItem(img_rai)
     view_angCurve.addItem(ang_cuv)
     # Set initial view bounds
-    view_rdi.setRange(QtCore.QRectF(30, 0, 64, 80))
-    view_rai.setRange(QtCore.QRectF(15, 0, 140, 80))
+    view_rdi.setRange(QtCore.QRectF(-5, 0, 140, 80))
+    view_rai.setRange(QtCore.QRectF(10, 0, 160, 80))
     updateTime = ptime.time()
 
     starbtn.clicked.connect(openradar)
@@ -269,7 +270,7 @@ collector = UdpListener('Listener', BinData, frame_length, address, buff_size)
 processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, "1130")
 collector.start()
 processor.start()
-plotIMAGE = threading.Thread(target=plot(config))
+plotIMAGE = threading.Thread(target=plot())
 plotIMAGE.start()
 
 sockConfig.sendto(send_cmd('6'), FPGA_address_cfg)
