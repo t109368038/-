@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-import DSP
+import DSP_2t4r
 from matplotlib.colors import ListedColormap
 from mpl_toolkits.mplot3d import Axes3D
 from read_binfile import read_bin_file
