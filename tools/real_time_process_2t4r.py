@@ -89,7 +89,7 @@ class DataProcessor(th.Thread):
         self.filename = file_name
         self.weight_matrix = np.zeros([181, 8], dtype=complex)
         self.out_matrix = np.zeros([8192, 181], dtype=complex)
-        Fc = 77e9
+        Fc = 77.2e9
         count = 0
         lambda_start = 3e8 / Fc
         for theta in range(-90, 91):
@@ -103,6 +103,7 @@ class DataProcessor(th.Thread):
         while True:
             data = self.bin_queue.get()
             data = np.reshape(data, [-1, 4])
+            np.save('../data/0105/' + self.filename + 'new' + str(frame_count), data)
             data = data[:, 0:2:] + 1j * data[:, 2::]
             data = np.reshape(data, [self.chirp_num * self.tx_num, -1, self.adc_sample])
             data = data.transpose([0, 2, 1])
@@ -111,7 +112,7 @@ class DataProcessor(th.Thread):
             data = np.concatenate([ch1_data, ch3_data], axis=2)
             frame_count += 1
             rdi_raw, rdi = DSP_2t4r.Range_Doppler(data, mode=2, padding_size=[128, 64])
-            # rai = DSP_2t4r.Range_Angle(data, mode=1, padding_size=[128, 64, 32])
+            # rai = DSP_2t4r.Range_Angle(data, mode=1, padding_size=[128, 64, 128])
             # ===============beamforming===============
             # print(np.shape(rdi_raw))
             rdi_raw = rdi_raw.reshape([-1, 8])
@@ -123,7 +124,7 @@ class DataProcessor(th.Thread):
             # rai = np.flip(rai, axis=1)
             rai = np.abs(rai)
             # ===============beamforming===============
-            # np.save('../data/Real_time_data/' + self.filename + 'Frame_' + str(frame_count), data)
+
 
             self.rdi_queue.put(rdi)
             self.rai_queue.put(rai)

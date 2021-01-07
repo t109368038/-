@@ -16,7 +16,8 @@ import socket
 from app_layout_2t4r import Ui_MainWindow
 
 # -----------------------------------------------
-config = '../radar_config/IWR1843_cfg_2t4r.cfg'
+config = '../radar_config/IWR1843_cfg_2t4r_70MHz.cfg'
+# config = '../radar_config/IWR1843_cfg_2t4r.cfg'
 
 
 # class CA_CFAR():
@@ -143,7 +144,7 @@ def send_cmd(code):
 
 
 def update_figure():
-    global img_rdi, img_rai, updateTime, ang_cuv
+    global img_rdi, img_rai, updateTime, ang_cuv, count
     win_param = [8, 8, 3, 3]
     # cfar_rai = CA_CFAR(win_param, threshold=2.5, rd_size=[64, 181])
     img_rdi.setImage(RDIData.get()[:, :, 0].T, levels=[0, 2.6e4])
@@ -151,14 +152,17 @@ def update_figure():
     # img_rai.setImage(cfar_rai(np.fliplr(RAIData.get()[0, :, :])).T)
 
     xx = RAIData.get()[:, :, :].sum(0)
-    img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T, levels=[1.2e4, 4e6])
+    img_rai.setImage((np.fliplr(np.flip(xx[36:-1,:], axis=0)).T))
+    # img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T)
+    # np.save('../data/0105/rai_new' + str(count), xx[36:-1, :])
 
     # img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T, levels=[1.2e4, 4e6])
     # angCurve.plot((np.fliplr(np.flip(xx, axis=0)).T)[:, 10:12].sum(1), clear=True)
-    ang_cuv.setData(np.fliplr(np.flip(xx, axis=0)).T[:, 10:12].sum(1), clear=True)
+    ang_cuv.setData(np.fliplr(np.flip(xx, axis=0)).T[:, 5:12].sum(1), clear=True)
     QtCore.QTimer.singleShot(1, update_figure)
     now = ptime.time()
     updateTime = now
+    count += 1
 
 
 def openradar():
@@ -235,7 +239,7 @@ def plot():
     app.instance().exec_()
     tt.StopRadar()
 
-
+count = 0
 # Queue for access data
 BinData = Queue()
 RDIData = Queue()
@@ -267,7 +271,7 @@ for k in range(5):
     print('receive command:', msg.hex())
 
 collector = UdpListener('Listener', BinData, frame_length, address, buff_size)
-processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, "1130")
+processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, "0105")
 collector.start()
 processor.start()
 plotIMAGE = threading.Thread(target=plot())
