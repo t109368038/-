@@ -3,7 +3,7 @@
 import numpy as np
 
 
-def Range_Doppler(data, mode=0, padding_size=None):
+def Range_Doppler(data, mode=0, padding_size=None, windowing=True):
     """
     :param data: array_like
                     Input array with the shape [chirps, samples, channels]
@@ -27,8 +27,9 @@ def Range_Doppler(data, mode=0, padding_size=None):
     channel = data.shape[2]
     # w = 20 * np.log10(sum(sum(window)))
     # c = 20 * np.log10(2 ** (16 - 1)) + w - 20 * np.log10(np.sqrt(2))
-    for i in range(channel):
-        data[:, :, i] = data[:, :, i] * window.T
+    if windowing:
+        for i in range(channel):
+            data[:, :, i] = data[:, :, i] * window.T
     # Range doppler processing
     if mode == 0:
         rdi_raw = np.fft.fft2(data, s=padding_size, axes=[0, 1])
@@ -51,7 +52,7 @@ def Range_Doppler(data, mode=0, padding_size=None):
         raise ValueError
 
 
-def Range_Angle(data, mode=0, padding_size=None):
+def Range_Angle(data, mode=0, padding_size=None, windowing=True):
     """
     :param data: array_like
                     Input array with the shape [chirps, samples, channels]
@@ -76,12 +77,14 @@ def Range_Angle(data, mode=0, padding_size=None):
     channel = data.shape[2]
     # w = 20 * np.log10(sum(sum(window)))
     # c = 20 * np.log10(2 ** (16 - 1)) + w - 20 * np.log10(np.sqrt(2))
+
     if padding_size is None:
         padding_size = data.shape
         print(padding_size)
 
-    for i in range(channel):
-        data[:, :, i] = data[:, :, i] * window.T
+    if windowing is True:
+        for i in range(channel):
+            data[:, :, i] = data[:, :, i] * window.T
 
     data = np.fft.fft2(data, s=[padding_size[0], padding_size[1]], axes=[0, 1])
 

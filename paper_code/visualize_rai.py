@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
 data_path = '../data/0105/'
-file_name = 'rai_old_empty25.npy'
+file_name = 'rai_new25.npy'
 
 data = np.fliplr(np.load(data_path + file_name))
 # tt = data
@@ -34,12 +34,12 @@ new_cmp = ListedColormap(colors)
 
 plt.figure()
 
-# plt.imshow(data, cmap=new_cmp, vmin=90, vmax=130)
+plt.imshow(data, cmap=new_cmp, vmin=90, vmax=130)
 # plt.imshow(data, cmap=new_cmp, vmin=1.2e4, vmax=1.7e6)
-plt.imshow(data, cmap=new_cmp)
+# plt.imshow(data, cmap=new_cmp)
 # plt.title("Bandwidth: 3.6 GHz / None-Fixed-Axis")
-# plt.title("Bandwidth: 3.6 GHz / Fixed-Axis")
-plt.title("Bandwidth: 3.99 GHz / None-Fixed-Axis")
+plt.title("Bandwidth: 3.6 GHz / Fixed-Axis")
+# plt.title("Bandwidth: 3.99 GHz / None-Fixed-Axis")
 # plt.title("Bandwidth: 3.99 GHz / Fixed-Axis")
 
 plt.xticks([])
@@ -50,7 +50,4 @@ plt.xticks([0, 90, 180], ['-90', '0', '+90'])
 plt.yticks([0, 26], ['+', '0m'])
 plt.gca().xaxis.set_ticks_position('none')
 plt.gca().yaxis.set_ticks_position('none')
-
-
-
 plt.show()

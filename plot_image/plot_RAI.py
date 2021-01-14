@@ -55,8 +55,8 @@ output = []
 output_rdi = []
 output_or = []
 for f in range(64):
-    tmp = DSP.Range_Angle(data[f, :, :, 0:4], 1, [128, 64, 32])
-    tmp2 = DSP.Range_Doppler(data[f, :, :, 0:4], 0, [32, 64])
+    tmp = DSP_2t4r.Range_Angle(data[f, :, :, 0:4], 1, [128, 64, 32])
+    tmp2 = DSP_2t4r.Range_Doppler(data[f, :, :, 0:4], 0, [32, 64])
     output.append(tmp.sum(0)[:, :])
     output_or.append(tmp)
     output_rdi.append(tmp2)
