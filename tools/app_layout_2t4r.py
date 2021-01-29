@@ -50,6 +50,7 @@ class Ui_MainWindow(object):
         font.setWeight(75)
         self.label_2.setFont(font)
         self.label_2.setObjectName("label_2")
+
         self.pushButton_exit = QtWidgets.QPushButton(self.centralwidget)
         self.pushButton_exit.setGeometry(QtCore.QRect(1170, 670, 90, 30))
         font = QtGui.QFont()
@@ -59,6 +60,16 @@ class Ui_MainWindow(object):
         font.setWeight(75)
         self.pushButton_exit.setFont(font)
         self.pushButton_exit.setObjectName("pushButton_exit")
+
+        self.pushButton_record = QtWidgets.QPushButton(self.centralwidget)
+        self.pushButton_record.setGeometry(QtCore.QRect(1070, 670, 90, 30))
+        font = QtGui.QFont()
+        font.setFamily("微軟正黑體 Light")
+        font.setBold(True)
+        font.setItalic(False)
+        font.setWeight(75)
+        self.pushButton_record.setFont(font)
+        self.pushButton_record.setObjectName("pushButton_exit")
 
         self.pushButton_start = QtWidgets.QPushButton(self.centralwidget)
         self.pushButton_start.setGeometry(QtCore.QRect(30, 670, 150, 30))
@@ -83,5 +94,6 @@ class Ui_MainWindow(object):
         self.label.setText(_translate("MainWindow", "Range-Doppler Image"))
         self.label_2.setText(_translate("MainWindow", "Range-Angle Image"))
         self.pushButton_exit.setText(_translate("MainWindow", "Exit"))
+        self.pushButton_record.setText(_translate("MainWindow", "Record"))
         self.pushButton_start.setText(_translate("MainWindow", "Send Radar Config"))
 

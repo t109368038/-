@@ -6,15 +6,16 @@ import sys
 
 
 class CamCapture(th.Thread):
-    def __init__(self, thread_id, name, counter, th_lock, mode=0):
+    def __init__(self, thread_id, name, counter, th_lock, cam_queue=None, mode=0):
         th.Thread.__init__(self)
         self.threadID = thread_id
         self.name = name
         self.counter = counter
         self.fourcc = cv2.VideoWriter_fourcc('X', 'V', 'I', 'D')
-        self.frame = 0
         self.lock = th_lock
         self.mode = mode
+        self.cam_queue = cam_queue
+        print('Camera Capture Mode:{}'.format(mode))
 
     def run(self):
         if self.mode == 0:
@@ -26,12 +27,12 @@ class CamCapture(th.Thread):
             cam = cv2.VideoCapture(self.counter)
             print("%s: %s\n" % (self.name, time.ctime(time.time())))
             while cam.isOpened():
-                ret, self.frame = cam.read()
+                ret, frame = cam.read()
                 if not ret:
                     print("Ignoring empty camera frame.")
                     # If loading a video, use 'break' instead of 'continue'.
                     continue
-                image = cv2.cvtColor(cv2.flip(self.frame, 1), cv2.COLOR_BGR2RGB)
+                image = cv2.cvtColor(cv2.flip(frame, 1), cv2.COLOR_BGR2RGB)
                 image.flags.writeable = False
                 results = hands.process(image)
                 image.flags.writeable = True
@@ -50,16 +51,28 @@ class CamCapture(th.Thread):
             print("%s: %s" % (self.name, time.ctime(time.time())))
         elif self.mode == 1:
             # no mediapipe
-            cv2.namedWindow(self.name)
+            # cv2.namedWindow(self.name)
             cam = cv2.VideoCapture(self.counter)
-            ret, self.frame = cam.read()
-            cv2.imshow(self.name, self.frame)
+            cam.set(cv2.CAP_PROP_FPS, 20)
+            fps = int(cam.get(5))
+            print('FPS:{}'.format(fps))
+            ret, frame = cam.read()
+            tmp_frame = frame
+            tmp_frame = cv2.cvtColor(cv2.flip(tmp_frame, 1), cv2.COLOR_BGR2RGB)
+            self.cam_queue.put(tmp_frame)
+            # cv2.imshow(self.name, frame)
+            print('Camera is opened')
             print("%s: %s\n" % (self.name, time.ctime(time.time())))
             while cam.isOpened():
-                ret, self.frame = cam.read()
-                cv2.imshow(self.name, self.frame)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+                # print('fps', fps)
+                # print(int(cam.get(cv2.CAP_PROP_FRAME_WIDTH)))
+                ret, frame = cam.read()
+                # cv2.imshow(self.name, frame)
+                tmp_frame = frame
+                tmp_frame = cv2.cvtColor(tmp_frame, cv2.COLOR_BGR2RGB)
+                self.cam_queue.put(tmp_frame)
+                # if cv2.waitKey(1) & 0xFF == ord('q'):
+                #     break
             cv2.destroyWindow(self.name)
             cam.release()
             cv2.VideoCapture(0)
@@ -69,11 +82,11 @@ class CamCapture(th.Thread):
             raise ValueError('CamCapture does not have this mode.')
 
 
-lock = th.Lock()
-cam1 = CamCapture(0, 'First', 0, lock, 3)
+# lock = th.Lock()
+# cam1 = CamCapture(0, 'First', 0, lock, 0)
 # cam2 = CamCapture(1, 'Second', 1, lock)
-cam1.start()
-cam1.join()
+# cam1.start()
+# cam1.join()
 # cam2.start()
 # threads = [cam1, cam2]
 # for t in threads:

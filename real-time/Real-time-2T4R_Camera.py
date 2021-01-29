@@ -1,8 +1,9 @@
 from real_time_process_2t4r import UdpListener, DataProcessor
+from CameraCapture import CamCapture
 from scipy import signal
 from radar_config import SerialConfig
 from queue import Queue
-
+import queue
 import pyqtgraph as pg
 import pyqtgraph.ptime as ptime
 from pyqtgraph.Qt import QtCore, QtGui, QtWidgets
@@ -14,79 +15,11 @@ import socket
 
 # -----------------------------------------------
 from app_layout_2t4r import Ui_MainWindow
-
 # -----------------------------------------------
 config = '../radar_config/IWR1843_cfg_2t4r_70MHz.cfg'
 # config = '../radar_config/IWR1843_cfg_2t4r.cfg'
+set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM4', BaudRate=115200)
 
-
-# class CA_CFAR():
-#     """
-#     Description:
-#     ------------
-#         Cell Averaging - Constant False Alarm Rate algorithm
-#         Performs an automatic detection on the input range-Doppler matrix with an adaptive thresholding.
-#         The threshold level is determined for each cell in the range-Doppler map with the estimation
-#         of the power level of its surrounding noise. The average power of the noise is estimated on a
-#         rectangular window, that is defined around the CUT (Cell Under Test). In order the mitigate the effect
-#         of the target reflection energy spreading some cells are left out from the calculation in the immediate
-#         vicinity of the CUT. These cells are the guard cells.
-#         The size of the estimation window and guard window can be set with the win_param parameter.
-#     Implementation notes:
-#     ---------------------
-#         Implementation based on https://github.com/petotamas/APRiL
-#     Parameters:
-#     -----------
-#     :param win_param: Parameters of the noise power estimation window
-#                       [Est. window length, Est. window width, Guard window length, Guard window width]
-#     :param threshold: Threshold level above the estimated average noise power
-#     :type win_param: python list with 4 elements
-#     :type threshold: float
-#     Return values:
-#     --------------
-#     """
-#
-#     def __init__(self, win_param, threshold, rd_size):
-#         win_width = win_param[0]
-#         win_height = win_param[1]
-#         guard_width = win_param[2]
-#         guard_height = win_param[3]
-#
-#         # Create window mask with guard cells
-#         self.mask = np.ones((2 * win_height + 1, 2 * win_width + 1), dtype=bool)
-#         self.mask[win_height - guard_height:win_height + 1 + guard_height, win_width - guard_width:win_width + 1 + guard_width] = 0
-#
-#         # Convert threshold value
-#         self.threshold = 10 ** (threshold / 10)
-#
-#         # Number cells within window around CUT; used for averaging operation.
-#         self.num_valid_cells_in_window = signal.convolve2d(np.ones(rd_size, dtype=float), self.mask, mode='same')
-#
-#     def __call__(self, rd_matrix):
-#         """
-#         Description:
-#         ------------
-#             Performs the automatic detection on the input range-Doppler matrix.
-#         Implementation notes:
-#         ---------------------
-#         Parameters:
-#         -----------
-#         :param rd_matrix: Range-Doppler map on which the automatic detection should be performed
-#         :type rd_matrix: R x D complex numpy array
-#         Return values:
-#         --------------
-#         :return hit_matrix: Calculated hit matrix
-#         """
-#         # Convert range-Doppler map values to power
-#         rd_matrix = np.abs(rd_matrix) ** 2
-#
-#         # Perform detection
-#         rd_windowed_sum = signal.convolve2d(rd_matrix, self.mask, mode='same')
-#         rd_avg_noise_power = rd_windowed_sum / self.num_valid_cells_in_window
-#         rd_snr = rd_matrix / rd_avg_noise_power
-#         hit_matrix = rd_snr > self.threshold
-#
-#         return hit_matrix
 
 def send_cmd(code):
     # command code list
@@ -144,7 +77,7 @@ def send_cmd(code):
 
 
 def update_figure():
-    global img_rdi, img_rai, updateTime, ang_cuv, count
+    global count
     win_param = [8, 8, 3, 3]
     # cfar_rai = CA_CFAR(win_param, threshold=2.5, rd_size=[64, 181])
     img_rdi.setImage(RDIData.get()[:, :, 0].T, levels=[0, 2.6e4])
@@ -158,7 +91,10 @@ def update_figure():
 
     # img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T, levels=[1.2e4, 4e6])
     # angCurve.plot((np.fliplr(np.flip(xx, axis=0)).T)[:, 10:12].sum(1), clear=True)
-    ang_cuv.setData(np.fliplr(np.flip(xx, axis=0)).T[:, 5:12].sum(1), clear=True)
+    # ang_cuv.setData(np.fliplr(np.flip(xx, axis=0)).T[:, 5:12].sum(1), clear=True)
+    yy = CAMData.get()
+    np.save('../data/img/' + str(count), yy)
+    img_cam.setImage(np.rot90(yy, -1))
     QtCore.QTimer.singleShot(1, update_figure)
     now = ptime.time()
     updateTime = now
@@ -166,15 +102,14 @@ def update_figure():
 
 
 def openradar():
-    global tt
-    tt = SerialConfig(name='ConnectRadar', CLIPort='COM4', BaudRate=115200)
-    tt.StopRadar()
-    tt.SendConfig(config)
-    update_figure()
+    if not CAMData.empty():
+        set_radar.StopRadar()
+        set_radar.SendConfig(config)
+        update_figure()
 
 
 def plot():
-    global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv
+    global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam
     # ---------------------------------------------------
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
@@ -185,17 +120,19 @@ def plot():
     ui.setupUi(MainWindow)
     view_rdi = ui.graphicsView.addViewBox()
     view_rai = ui.graphicsView_2.addViewBox()
-    view_angCurve = ui.graphicsView_3.addViewBox()
+    view_cam = ui.graphicsView_3.addViewBox()
+    # view_angCurve = ui.graphicsView_3.addViewBox()
     starbtn = ui.pushButton_start
     exitbtn = ui.pushButton_exit
     # ---------------------------------------------------
-
     # lock the aspect ratio so pixels are always square
     view_rdi.setAspectLocked(True)
     view_rai.setAspectLocked(True)
+    view_cam.setAspectLocked(True)
     img_rdi = pg.ImageItem(border='w')
     img_rai = pg.ImageItem(border='w')
-    ang_cuv = pg.PlotDataItem(tmp_data, pen='r')
+    img_cam = pg.ImageItem(border='w')
+    # ang_cuv = pg.PlotDataItem(tmp_data, pen='r')
     # Colormap
     position = np.arange(64)
     position = position / 64
@@ -228,59 +165,68 @@ def plot():
     img_rai.setLookupTable(lookup_table)
     view_rdi.addItem(img_rdi)
     view_rai.addItem(img_rai)
-    view_angCurve.addItem(ang_cuv)
+    view_cam.addItem(img_cam)
+    # view_angCurve.addItem(ang_cuv)
     # Set initial view bounds
     view_rdi.setRange(QtCore.QRectF(-5, 0, 140, 80))
     view_rai.setRange(QtCore.QRectF(10, 0, 160, 80))
     updateTime = ptime.time()
-
     starbtn.clicked.connect(openradar)
     exitbtn.clicked.connect(app.instance().exit)
     app.instance().exec_()
-    tt.StopRadar()
+    set_radar.StopRadar()
 
-count = 0
-# Queue for access data
-BinData = Queue()
-RDIData = Queue()
-RAIData = Queue()
-# Radar config
-adc_sample = 64
-chirp = 32
-tx_num = 2
-rx_num = 4
-radar_config = [adc_sample, chirp, tx_num, rx_num]
-frame_length = adc_sample * chirp * tx_num * rx_num * 2
-# Host setting
-address = ('192.168.33.30', 4098)
-buff_size = 2097152
 
-# config DCA1000 to receive bin data
-config_address = ('192.168.33.30', 4096)
-FPGA_address_cfg = ('192.168.33.180', 4096)
-cmd_order = ['9', 'E', '3', 'B', '5', '6']
-sockConfig = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sockConfig.bind(config_address)
+if __name__ == '__main__':
+    count = 0
+    # Queue for access data
+    BinData = Queue()
+    RDIData = Queue()
+    RAIData = Queue()
+    CAMData = queue.LifoQueue()
+    # Radar config
+    adc_sample = 64
+    chirp = 32
+    tx_num = 2
+    rx_num = 4
+    radar_config = [adc_sample, chirp, tx_num, rx_num]
+    frame_length = adc_sample * chirp * tx_num * rx_num * 2
+    # Host setting
+    address = ('192.168.33.30', 4098)
+    buff_size = 2097152
 
-for k in range(5):
-    # Send the command
-    sockConfig.sendto(send_cmd(cmd_order[k]), FPGA_address_cfg)
-    time.sleep(0.1)
-    # Request data back on the config port
-    msg, server = sockConfig.recvfrom(2048)
-    print('receive command:', msg.hex())
+    # config DCA1000 to receive bin data
+    config_address = ('192.168.33.30', 4096)
+    FPGA_address_cfg = ('192.168.33.180', 4096)
+    cmd_order = ['9', 'E', '3', 'B', '5', '6']
+    sockConfig = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sockConfig.bind(config_address)
 
-collector = UdpListener('Listener', BinData, frame_length, address, buff_size)
-processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, "0105")
-collector.start()
-processor.start()
-plotIMAGE = threading.Thread(target=plot())
-plotIMAGE.start()
+    for k in range(5):
+        # Send the command
+        sockConfig.sendto(send_cmd(cmd_order[k]), FPGA_address_cfg)
+        time.sleep(0.1)
+        # Request data back on the config port
+        msg, server = sockConfig.recvfrom(2048)
+        print('receive command:', msg.hex())
 
-sockConfig.sendto(send_cmd('6'), FPGA_address_cfg)
-sockConfig.close()
-collector.join(timeout=1)
-processor.join(timeout=1)
+    lock = threading.Lock()
+    cam1 = CamCapture(0, 'First', 0, lock, CAMData, mode=1)
+    # cam2 = CamCapture(1, 'Second', 1, lock, 1)
+    collector = UdpListener('Listener', BinData, frame_length, address, buff_size)
+    processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, "0105")
 
-print("Program close")
-sys.exit()
+    # cam2.start()
+    cam1.start()
+    collector.start()
+    processor.start()
+    plotIMAGE = threading.Thread(target=plot())
+    plotIMAGE.start()
+
+    sockConfig.sendto(send_cmd('6'), FPGA_address_cfg)
+    sockConfig.close()
+    collector.join(timeout=1)
+    processor.join(timeout=1)
+
+    print("Program close")
+    sys.exit()

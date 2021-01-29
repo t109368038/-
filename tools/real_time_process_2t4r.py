@@ -103,7 +103,7 @@ class DataProcessor(th.Thread):
         while True:
             data = self.bin_queue.get()
             data = np.reshape(data, [-1, 4])
-            np.save('../data/0112/' + self.filename + 'new' + str(frame_count), data)
+            # np.save('../data/0112/' + self.filename + 'new' + str(frame_count), data)
             data = data[:, 0:2:] + 1j * data[:, 2::]
             data = np.reshape(data, [self.chirp_num * self.tx_num, -1, self.adc_sample])
             data = data.transpose([0, 2, 1])
@@ -124,7 +124,5 @@ class DataProcessor(th.Thread):
             # rai = np.flip(rai, axis=1)
             rai = np.abs(rai)
             # ===============beamforming===============
-
-
             self.rdi_queue.put(rdi)
             self.rai_queue.put(rai)
