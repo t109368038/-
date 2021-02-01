@@ -39,7 +39,7 @@ class UdpListener(th.Thread):
         data_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         data_socket.bind(self.data_address)
         print("Create socket successfully")
-        print("Now start data streaming")
+        print("Now waiting for the data stream")
         # main loop
         while True:
             data, addr = data_socket.recvfrom(self.buff_size)
@@ -56,7 +56,7 @@ class UdpListener(th.Thread):
 
 
 class DataProcessor(th.Thread):
-    def __init__(self, name, config, bin_queue, rdi_queue, rai_queue, file_name):
+    def __init__(self, name, config, bin_queue, rdi_queue, rai_queue, raw_queue, file_name, status=0):
         """
         :param name: str
                         Object name
@@ -86,7 +86,9 @@ class DataProcessor(th.Thread):
         self.bin_queue = bin_queue
         self.rdi_queue = rdi_queue
         self.rai_queue = rai_queue
+        self.raw_queue = raw_queue
         self.filename = file_name
+        self.status = status
         self.weight_matrix = np.zeros([181, 8], dtype=complex)
         self.out_matrix = np.zeros([8192, 181], dtype=complex)
         Fc = 77.2e9
@@ -111,18 +113,23 @@ class DataProcessor(th.Thread):
             ch3_data = data[1: 64: 2, :, :]
             data = np.concatenate([ch1_data, ch3_data], axis=2)
             frame_count += 1
+            # print(self.status)
+            if self.status == 1:
+                # print(self.status)
+                self.raw_queue.put(data)
             rdi_raw, rdi = DSP_2t4r.Range_Doppler(data, mode=2, padding_size=[128, 64])
             # rai = DSP_2t4r.Range_Angle(data, mode=1, padding_size=[128, 64, 128])
             # ===============beamforming===============
             # print(np.shape(rdi_raw))
-            rdi_raw = rdi_raw.reshape([-1, 8])
-            # print(np.shape(rdi_raw))
-            for i in range(8192):
-                self.out_matrix[i, :] = np.matmul(self.weight_matrix, rdi_raw[i, :])
-            rai = self.out_matrix.reshape([128, 64, -1])
-            # rai = np.flip(np.abs(rai), axis=1)
-            # rai = np.flip(rai, axis=1)
-            rai = np.abs(rai)
+            # rdi_raw = rdi_raw.reshape([-1, 8])
+            # # print(np.shape(rdi_raw))
+            # for i in range(8192):
+            #     self.out_matrix[i, :] = np.matmul(self.weight_matrix, rdi_raw[i, :])
+            # rai = self.out_matrix.reshape([128, 64, -1])
+            # # rai = np.flip(np.abs(rai), axis=1)
+            # # rai = np.flip(rai, axis=1)
+            # rai = np.abs(rai)
             # ===============beamforming===============
             self.rdi_queue.put(rdi)
-            self.rai_queue.put(rai)
+            # self.rai_queue.put(rai)
+

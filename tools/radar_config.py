@@ -18,11 +18,11 @@ class SerialConfig():
 
     def StartRadar(self):
         self.CLIPort.write('sensorStart\n'.encode())
-        print('sensorStart\n')
+        print('Sensor Start')
 
     def StopRadar(self):
         self.CLIPort.write('sensorStop\n'.encode())
-        print('sensorStop\n')
+        print('Sensor Stop')
 
     def DisconnectRadar(self):
         self.CLIPort.write('sensorStop\n'.encode())

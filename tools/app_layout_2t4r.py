@@ -69,7 +69,7 @@ class Ui_MainWindow(object):
         font.setItalic(False)
         font.setWeight(75)
         self.pushButton_record.setFont(font)
-        self.pushButton_record.setObjectName("pushButton_exit")
+        self.pushButton_record.setObjectName("pushButton_record")
 
         self.pushButton_start = QtWidgets.QPushButton(self.centralwidget)
         self.pushButton_start.setGeometry(QtCore.QRect(30, 670, 150, 30))

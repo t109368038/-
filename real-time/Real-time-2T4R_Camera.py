@@ -12,6 +12,7 @@ import threading
 import time
 import sys
 import socket
+import cv2
 
 # -----------------------------------------------
 from app_layout_2t4r import Ui_MainWindow
@@ -72,7 +73,7 @@ def send_cmd(code):
         re = stop_record
     else:
         re = 'NULL'
-    print('send command:', re.hex())
+    # print('send command:', re.hex())
     return re
 
 
@@ -84,8 +85,9 @@ def update_figure():
     # img_rdi.setImage(np.abs(RDIData.get()[:, :, 0].T))
     # img_rai.setImage(cfar_rai(np.fliplr(RAIData.get()[0, :, :])).T)
 
-    xx = RAIData.get()[:, :, :].sum(0)
-    img_rai.setImage((np.fliplr(np.flip(xx[36:-1,:], axis=0)).T))
+    # xx = RAIData.get()[:, :, :].sum(0)
+    # img_rai.setImage((np.fliplr(np.flip(xx[36:-1,:], axis=0)).T))
+
     # img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T)
     # np.save('../data/0105/rai_new' + str(count), xx[36:-1, :])
 
@@ -93,7 +95,7 @@ def update_figure():
     # angCurve.plot((np.fliplr(np.flip(xx, axis=0)).T)[:, 10:12].sum(1), clear=True)
     # ang_cuv.setData(np.fliplr(np.flip(xx, axis=0)).T[:, 5:12].sum(1), clear=True)
     yy = CAMData.get()
-    np.save('../data/img/' + str(count), yy)
+    # np.save('../data/img/' + str(count), yy)
     img_cam.setImage(np.rot90(yy, -1))
     QtCore.QTimer.singleShot(1, update_figure)
     now = ptime.time()
@@ -106,6 +108,12 @@ def openradar():
         set_radar.StopRadar()
         set_radar.SendConfig(config)
         update_figure()
+
+
+def StartRecord():
+    processor.status = 1
+    cam1.status = 1
+    print('Start Record')
 
 
 def plot():
@@ -124,6 +132,7 @@ def plot():
     # view_angCurve = ui.graphicsView_3.addViewBox()
     starbtn = ui.pushButton_start
     exitbtn = ui.pushButton_exit
+    recordbtn = ui.pushButton_record
     # ---------------------------------------------------
     # lock the aspect ratio so pixels are always square
     view_rdi.setAspectLocked(True)
@@ -172,6 +181,7 @@ def plot():
     view_rai.setRange(QtCore.QRectF(10, 0, 160, 80))
     updateTime = ptime.time()
     starbtn.clicked.connect(openradar)
+    recordbtn.clicked.connect(StartRecord)
     exitbtn.clicked.connect(app.instance().exit)
     app.instance().exec_()
     set_radar.StopRadar()
@@ -184,6 +194,8 @@ if __name__ == '__main__':
     RDIData = Queue()
     RAIData = Queue()
     CAMData = queue.LifoQueue()
+    rawData = Queue()
+    cam_rawData = Queue()
     # Radar config
     adc_sample = 64
     chirp = 32
@@ -208,13 +220,13 @@ if __name__ == '__main__':
         time.sleep(0.1)
         # Request data back on the config port
         msg, server = sockConfig.recvfrom(2048)
-        print('receive command:', msg.hex())
+        # print('receive command:', msg.hex())
 
     lock = threading.Lock()
-    cam1 = CamCapture(0, 'First', 0, lock, CAMData, mode=1)
+    cam1 = CamCapture(0, 'First', 0, lock, CAMData, cam_rawData, mode=1)
     # cam2 = CamCapture(1, 'Second', 1, lock, 1)
     collector = UdpListener('Listener', BinData, frame_length, address, buff_size)
-    processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, "0105")
+    processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, rawData, "0105", status=0)
 
     # cam2.start()
     cam1.start()
@@ -228,5 +240,21 @@ if __name__ == '__main__':
     collector.join(timeout=1)
     processor.join(timeout=1)
 
-    print("Program close")
+    print('Save File')
+    data_save = []
+    while not rawData.empty():
+        tmp = rawData.get()
+        data_save.append(tmp)
+        print('Current size', np.shape(data_save))
+    np.save('../data/0201/Frame/raw.npy', data_save)
+
+    cam_save = []
+    while not cam_rawData.empty():
+        tmp = cam_rawData.get()
+        cam_save.append(tmp)
+        print('Current size', np.shape(cam_save))
+    np.save('../data/0201/Frame/cam_raw.npy', cam_save)
+    print('Save File Done')
+
+    print("Program Close")
     sys.exit()

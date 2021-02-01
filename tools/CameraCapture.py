@@ -6,7 +6,7 @@ import sys
 
 
 class CamCapture(th.Thread):
-    def __init__(self, thread_id, name, counter, th_lock, cam_queue=None, mode=0):
+    def __init__(self, thread_id, name, counter, th_lock, cam_queue=None, save_queue=None, status=0, mode=0):
         th.Thread.__init__(self)
         self.threadID = thread_id
         self.name = name
@@ -15,6 +15,8 @@ class CamCapture(th.Thread):
         self.lock = th_lock
         self.mode = mode
         self.cam_queue = cam_queue
+        self.save_queue = save_queue
+        self.status = status
         print('Camera Capture Mode:{}'.format(mode))
 
     def run(self):
@@ -62,7 +64,7 @@ class CamCapture(th.Thread):
             self.cam_queue.put(tmp_frame)
             # cv2.imshow(self.name, frame)
             print('Camera is opened')
-            print("%s: %s\n" % (self.name, time.ctime(time.time())))
+            print("Camera[%s] open time: %s\n" % (self.counter, time.ctime(time.time())))
             while cam.isOpened():
                 # print('fps', fps)
                 # print(int(cam.get(cv2.CAP_PROP_FRAME_WIDTH)))
@@ -70,6 +72,9 @@ class CamCapture(th.Thread):
                 # cv2.imshow(self.name, frame)
                 tmp_frame = frame
                 tmp_frame = cv2.cvtColor(tmp_frame, cv2.COLOR_BGR2RGB)
+                if self.status == 1:
+                    # print(self.status)
+                    self.save_queue.put(tmp_frame)
                 self.cam_queue.put(tmp_frame)
                 # if cv2.waitKey(1) & 0xFF == ord('q'):
                 #     break
