@@ -5,7 +5,7 @@ import DSP_2t4r
 
 
 class UdpListener(th.Thread):
-    def __init__(self, name, bin_data, data_frame_length, data_address, buff_size):
+    def __init__(self, name, bin_data, data_frame_length, data_address, buff_size, save_data):
         """
         :param name: str
                         Object name
@@ -27,6 +27,8 @@ class UdpListener(th.Thread):
         self.frame_length = data_frame_length
         self.data_address = data_address
         self.buff_size = buff_size
+        self.save_data = save_data
+        self.status = 0
 
     def run(self):
         # convert bytes to data type int16
@@ -38,8 +40,8 @@ class UdpListener(th.Thread):
         count_frame = 0
         data_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         data_socket.bind(self.data_address)
-        print("Create socket successfully")
-        print("Now waiting for the data stream")
+        print("Create Data Socket Successfully")
+        print("Waiting For The Data Stream")
         # main loop
         while True:
             data, addr = data_socket.recvfrom(self.buff_size)
@@ -50,13 +52,17 @@ class UdpListener(th.Thread):
                 count_frame += 1
                 # print("Frame No.", count_frame)
                 # put one frame data into bin data array
+                if self.status == 1:
+                    # print(self.status)
+                    # print("Frame No.", count_frame)
+                    self.save_data.put(np_data[0:self.frame_length])
                 self.bin_data.put(np_data[0:self.frame_length])
                 # remove one frame length data from array
                 np_data = np_data[self.frame_length:]
 
 
 class DataProcessor(th.Thread):
-    def __init__(self, name, config, bin_queue, rdi_queue, rai_queue, raw_queue, file_name, status=0):
+    def __init__(self, name, config, bin_queue, rdi_queue, rai_queue, raw_queue=None, file_name=0, status=0):
         """
         :param name: str
                         Object name
@@ -113,21 +119,24 @@ class DataProcessor(th.Thread):
             ch3_data = data[1: 64: 2, :, :]
             data = np.concatenate([ch1_data, ch3_data], axis=2)
             frame_count += 1
+
             # print(self.status)
-            if self.status == 1:
-                # print(self.status)
-                self.raw_queue.put(data)
+            # if self.status == 1:
+            #     # print(self.status)
+            #     self.raw_queue.put(data)
+
             rdi_raw, rdi = DSP_2t4r.Range_Doppler(data, mode=2, padding_size=[128, 64])
             # rai = DSP_2t4r.Range_Angle(data, mode=1, padding_size=[128, 64, 128])
+
             # ===============beamforming===============
             # print(np.shape(rdi_raw))
             # rdi_raw = rdi_raw.reshape([-1, 8])
-            # # print(np.shape(rdi_raw))
+            # print(np.shape(rdi_raw))
             # for i in range(8192):
             #     self.out_matrix[i, :] = np.matmul(self.weight_matrix, rdi_raw[i, :])
             # rai = self.out_matrix.reshape([128, 64, -1])
-            # # rai = np.flip(np.abs(rai), axis=1)
-            # # rai = np.flip(rai, axis=1)
+            # rai = np.flip(np.abs(rai), axis=1)
+            # rai = np.flip(rai, axis=1)
             # rai = np.abs(rai)
             # ===============beamforming===============
             self.rdi_queue.put(rdi)

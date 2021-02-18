@@ -17,8 +17,8 @@ import cv2
 # -----------------------------------------------
 from app_layout_2t4r import Ui_MainWindow
 # -----------------------------------------------
-config = '../radar_config/IWR1843_cfg_2t4r_70MHz.cfg'
-# config = '../radar_config/IWR1843_cfg_2t4r.cfg'
+# config = '../radar_config/IWR1843_cfg_2t4r_70MHz.cfg'
+config = '../radar_config/IWR1843_cfg_2t4r.cfg'
 set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM4', BaudRate=115200)
 
 
@@ -81,22 +81,24 @@ def update_figure():
     global count
     win_param = [8, 8, 3, 3]
     # cfar_rai = CA_CFAR(win_param, threshold=2.5, rd_size=[64, 181])
-    img_rdi.setImage(RDIData.get()[:, :, 0].T, levels=[0, 2.6e4])
-    # img_rdi.setImage(np.abs(RDIData.get()[:, :, 0].T))
-    # img_rai.setImage(cfar_rai(np.fliplr(RAIData.get()[0, :, :])).T)
+    if not RDIData.empty():
+        img_rdi.setImage(RDIData.get()[:, :, 0].T, levels=[0, 2.6e4])
+        # img_rdi.setImage(np.abs(RDIData.get()[:, :, 0].T))
+        # img_rai.setImage(cfar_rai(np.fliplr(RAIData.get()[0, :, :])).T)
+    if not RAIData.empty():
+        xx = RAIData.get()[:, :, :].sum(0)
+        # img_rai.setImage((np.fliplr(np.flip(xx[36:-1,:], axis=0)).T))
 
-    # xx = RAIData.get()[:, :, :].sum(0)
-    # img_rai.setImage((np.fliplr(np.flip(xx[36:-1,:], axis=0)).T))
+        img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T)
+        # np.save('../data/0105/rai_new' + str(count), xx[36:-1, :])
 
-    # img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T)
-    # np.save('../data/0105/rai_new' + str(count), xx[36:-1, :])
-
-    # img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T, levels=[1.2e4, 4e6])
-    # angCurve.plot((np.fliplr(np.flip(xx, axis=0)).T)[:, 10:12].sum(1), clear=True)
-    # ang_cuv.setData(np.fliplr(np.flip(xx, axis=0)).T[:, 5:12].sum(1), clear=True)
-    yy = CAMData.get()
-    # np.save('../data/img/' + str(count), yy)
-    img_cam.setImage(np.rot90(yy, -1))
+        # img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T, levels=[1.2e4, 4e6])
+        # angCurve.plot((np.fliplr(np.flip(xx, axis=0)).T)[:, 10:12].sum(1), clear=True)
+        # ang_cuv.setData(np.fliplr(np.flip(xx, axis=0)).T[:, 5:12].sum(1), clear=True)
+    if not CAMData.empty():
+        yy = CAMData.get()
+        # np.save('../data/img/' + str(count), yy)
+        img_cam.setImage(np.rot90(yy, -1))
     QtCore.QTimer.singleShot(1, update_figure)
     now = ptime.time()
     updateTime = now
@@ -104,20 +106,92 @@ def update_figure():
 
 
 def openradar():
-    if not CAMData.empty():
-        set_radar.StopRadar()
-        set_radar.SendConfig(config)
-        update_figure()
+    # if not CAMData.empty():
+    #     set_radar.StopRadar()
+    #     set_radar.SendConfig(config)
+    #     update_figure()
+    set_radar.StopRadar()
+    set_radar.SendConfig(config)
+    update_figure()
 
 
 def StartRecord():
-    processor.status = 1
+    # processor.status = 1
+    collector.status = 1
     cam1.status = 1
-    print('Start Record')
+    cam2.status = 1
+    print('Start Record Time:', (time.ctime(time.time())))
+    print('========================================')
+
+
+def StopRecord():
+    # processor.status = 0
+    collector.status = 0
+    cam1.status = 0
+    cam2.status = 0
+    print('Stop Record Time:', (time.ctime(time.time())))
+    print('========================================')
+
+
+def ConnectDca():
+    global sockConfig, FPGA_address_cfg
+    print('Connect to DCA1000')
+    print('========================================')
+    config_address = ('192.168.33.30', 4096)
+    FPGA_address_cfg = ('192.168.33.180', 4096)
+    cmd_order = ['9', 'E', '3', 'B', '5', '6']
+    sockConfig = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sockConfig.bind(config_address)
+    for k in range(5):
+        # Send the command
+        sockConfig.sendto(send_cmd(cmd_order[k]), FPGA_address_cfg)
+        time.sleep(0.1)
+        # Request data back on the config port
+        msg, server = sockConfig.recvfrom(2048)
+        # print('receive command:', msg.hex())
+
+def SaveData():
+    global savefilename, sockConfig, FPGA_address_cfg
+    set_radar.StopRadar()
+    # sockConfig.sendto(send_cmd('6'), FPGA_address_cfg)
+    # sockConfig.close()
+    name = savefilename.toPlainText()
+    print('========================================')
+    print('File Name:', name)
+    print('========================================')
+    data_save = []
+    while not rawData.empty():
+        tmp = rawData.get()
+        data_save.append(tmp)
+    # print('Radar data size:', np.shape(data_save))
+    # np.save('../data/0201/Frame/raw.npy', data_save)
+    print('Radar File Size', np.shape(data_save)[0])
+    print('========================================')
+    cam_save = []
+    while not cam_rawData.empty():
+        tmp = cam_rawData.get()
+        cam_save.append(tmp)
+    # print('Camera data size', np.shape(cam_save))
+    # np.save('../data/0201/Frame/cam_raw.npy', cam_save)
+    print('Camera 1 File Size:', np.shape(cam_save)[0])
+    print('========================================')
+    cam_save2 = []
+    while not cam_rawData2.empty():
+        tmp = cam_rawData2.get()
+        cam_save2.append(tmp)
+    # print('Camera data size', np.shape(cam_save))
+    # np.save('../data/0201/Frame/cam_raw.npy', cam_save)
+    print('Camera 2 File Size:', np.shape(cam_save2)[0])
+    print('========================================')
+    print('Save File Done')
+    print('========================================')
+    if not RDIData.empty():
+        RDIData.get()
+    img_rdi.clear()
 
 
 def plot():
-    global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam
+    global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename
     # ---------------------------------------------------
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
@@ -133,6 +207,10 @@ def plot():
     starbtn = ui.pushButton_start
     exitbtn = ui.pushButton_exit
     recordbtn = ui.pushButton_record
+    stoprecordbtn = ui.pushButton_stop_record
+    savebtn = ui.pushButton_save
+    dcabtn = ui.pushButton_DCA
+    savefilename = ui.textEdit
     # ---------------------------------------------------
     # lock the aspect ratio so pixels are always square
     view_rdi.setAspectLocked(True)
@@ -182,6 +260,9 @@ def plot():
     updateTime = ptime.time()
     starbtn.clicked.connect(openradar)
     recordbtn.clicked.connect(StartRecord)
+    stoprecordbtn.clicked.connect(StopRecord)
+    savebtn.clicked.connect(SaveData)
+    dcabtn.clicked.connect(ConnectDca)
     exitbtn.clicked.connect(app.instance().exit)
     app.instance().exec_()
     set_radar.StopRadar()
@@ -193,9 +274,11 @@ if __name__ == '__main__':
     BinData = Queue()
     RDIData = Queue()
     RAIData = Queue()
-    CAMData = queue.LifoQueue()
+    CAMData = Queue()
+    CAMData2 = Queue()
     rawData = Queue()
     cam_rawData = Queue()
+    cam_rawData2 = Queue()
     # Radar config
     adc_sample = 64
     chirp = 32
@@ -207,54 +290,36 @@ if __name__ == '__main__':
     address = ('192.168.33.30', 4098)
     buff_size = 2097152
 
-    # config DCA1000 to receive bin data
-    config_address = ('192.168.33.30', 4096)
-    FPGA_address_cfg = ('192.168.33.180', 4096)
-    cmd_order = ['9', 'E', '3', 'B', '5', '6']
-    sockConfig = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sockConfig.bind(config_address)
+    # # config DCA1000 to receive bin data
+    # config_address = ('192.168.33.30', 4096)
+    # FPGA_address_cfg = ('192.168.33.180', 4096)
+    # cmd_order = ['9', 'E', '3', 'B', '5', '6']
+    # sockConfig = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    # sockConfig.bind(config_address)
 
-    for k in range(5):
-        # Send the command
-        sockConfig.sendto(send_cmd(cmd_order[k]), FPGA_address_cfg)
-        time.sleep(0.1)
-        # Request data back on the config port
-        msg, server = sockConfig.recvfrom(2048)
-        # print('receive command:', msg.hex())
 
     lock = threading.Lock()
     cam1 = CamCapture(0, 'First', 0, lock, CAMData, cam_rawData, mode=1)
-    # cam2 = CamCapture(1, 'Second', 1, lock, 1)
-    collector = UdpListener('Listener', BinData, frame_length, address, buff_size)
-    processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, rawData, "0105", status=0)
+    cam2 = CamCapture(1, 'Second', 1, lock, CAMData2, cam_rawData2, mode=1)
 
-    # cam2.start()
+    # cam2 = CamCapture(1, 'Second', 1, lock, 1)
+
+    collector = UdpListener('Listener', BinData, frame_length, address, buff_size, rawData)
+    processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, 0, "0105", status=0)
+
     cam1.start()
+    cam2.start()
     collector.start()
     processor.start()
     plotIMAGE = threading.Thread(target=plot())
     plotIMAGE.start()
 
-    sockConfig.sendto(send_cmd('6'), FPGA_address_cfg)
-    sockConfig.close()
+    # sockConfig.sendto(send_cmd('6'), FPGA_address_cfg)
+    # sockConfig.close()
     collector.join(timeout=1)
     processor.join(timeout=1)
-
-    print('Save File')
-    data_save = []
-    while not rawData.empty():
-        tmp = rawData.get()
-        data_save.append(tmp)
-        print('Current size', np.shape(data_save))
-    np.save('../data/0201/Frame/raw.npy', data_save)
-
-    cam_save = []
-    while not cam_rawData.empty():
-        tmp = cam_rawData.get()
-        cam_save.append(tmp)
-        print('Current size', np.shape(cam_save))
-    np.save('../data/0201/Frame/cam_raw.npy', cam_save)
-    print('Save File Done')
+    cam1.close()
+    cam2.close()
 
     print("Program Close")
     sys.exit()
