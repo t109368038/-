@@ -42,6 +42,7 @@ class UdpListener(th.Thread):
         data_socket.bind(self.data_address)
         print("Create Data Socket Successfully")
         print("Waiting For The Data Stream")
+        print('=======================================')
         # main loop
         while True:
             data, addr = data_socket.recvfrom(self.buff_size)

@@ -113,8 +113,9 @@ class Ui_MainWindow(object):
         self.pushButton_DCA.setFont(font)
         self.pushButton_DCA.setObjectName("pushButton_DCA")
 
+
         self.label_3 = QtWidgets.QLabel(self.centralwidget)
-        self.label_3.setGeometry(QtCore.QRect(350, 670, 120, 30))
+        self.label_3.setGeometry(QtCore.QRect(350, 670, 600, 30))
         font = QtGui.QFont()
         font.setFamily("微軟正黑體 Light")
         # font.setPointSize(14)
@@ -124,10 +125,21 @@ class Ui_MainWindow(object):
         self.label_3.setFont(font)
         self.label_3.setObjectName("label_3")
 
-        self.textEdit = QTextEdit(self.centralwidget)
-        self.textEdit.setGeometry(QtCore.QRect(480, 670, 150, 30))
-        self.textEdit.setFont(font)
-        self.textEdit.setObjectName("textEdit_save")
+        # self.label_4 = QtWidgets.QLabel(self.centralwidget)
+        # self.label_4.setGeometry(QtCore.QRect(350, 670, 120, 30))
+        # font = QtGui.QFont()
+        # font.setFamily("微軟正黑體 Light")
+        # # font.setPointSize(14)
+        # font.setBold(True)
+        # font.setItalic(False)
+        # font.setWeight(1000)
+        # self.label_4.setFont(font)
+        # self.label_4.setObjectName("label_4")
+
+        # self.textEdit = QTextEdit(self.centralwidget)
+        # self.textEdit.setGeometry(QtCore.QRect(780, 670, 150, 30))
+        # self.textEdit.setFont(font)
+        # self.textEdit.setObjectName("textEdit_save")
 
 
         MainWindow.setCentralWidget(self.centralwidget)
@@ -143,7 +155,7 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(_translate("MainWindow", "Real-Time Radar"))
         self.label.setText(_translate("MainWindow", "Range-Doppler Image"))
         self.label_2.setText(_translate("MainWindow", "Range-Angle Image"))
-        self.label_3.setText(_translate("MainWindow", "Save File Name:"))
+        self.label_3.setText(_translate("MainWindow", "Save File Path & Name:"))
         self.pushButton_exit.setText(_translate("MainWindow", "Exit"))
         self.pushButton_record.setText(_translate("MainWindow", "Record"))
         self.pushButton_start.setText(_translate("MainWindow", "Send Radar Config"))

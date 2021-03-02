@@ -3,6 +3,8 @@ from CameraCapture import CamCapture
 from scipy import signal
 from radar_config import SerialConfig
 from queue import Queue
+from tkinter import filedialog
+import tkinter as tk
 import queue
 import pyqtgraph as pg
 import pyqtgraph.ptime as ptime
@@ -82,9 +84,12 @@ def update_figure():
     win_param = [8, 8, 3, 3]
     # cfar_rai = CA_CFAR(win_param, threshold=2.5, rd_size=[64, 181])
     if not RDIData.empty():
-        img_rdi.setImage(RDIData.get()[:, :, 0].T, levels=[0, 2.6e4])
+        rd = RDIData.get()
+        img_rdi.setImage(rd[:, :, 0].T, levels=[0, 2.6e4])
         # img_rdi.setImage(np.abs(RDIData.get()[:, :, 0].T))
         # img_rai.setImage(cfar_rai(np.fliplr(RAIData.get()[0, :, :])).T)
+        # ang_cuv.setData(rd[:, :, 0].sum(1))
+
     if not RAIData.empty():
         xx = RAIData.get()[:, :, :].sum(0)
         # img_rai.setImage((np.fliplr(np.flip(xx[36:-1,:], axis=0)).T))
@@ -94,11 +99,12 @@ def update_figure():
 
         # img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T, levels=[1.2e4, 4e6])
         # angCurve.plot((np.fliplr(np.flip(xx, axis=0)).T)[:, 10:12].sum(1), clear=True)
-        # ang_cuv.setData(np.fliplr(np.flip(xx, axis=0)).T[:, 5:12].sum(1), clear=True)
+
     if not CAMData.empty():
         yy = CAMData.get()
         # np.save('../data/img/' + str(count), yy)
         img_cam.setImage(np.rot90(yy, -1))
+
     QtCore.QTimer.singleShot(1, update_figure)
     now = ptime.time()
     updateTime = now
@@ -112,31 +118,32 @@ def openradar():
     #     update_figure()
     set_radar.StopRadar()
     set_radar.SendConfig(config)
+    print('=======================================')
     update_figure()
 
 
 def StartRecord():
     # processor.status = 1
     collector.status = 1
-    cam1.status = 1
+    # cam1.status = 1
     cam2.status = 1
     print('Start Record Time:', (time.ctime(time.time())))
-    print('========================================')
+    print('=======================================')
 
 
 def StopRecord():
     # processor.status = 0
     collector.status = 0
-    cam1.status = 0
+    # cam1.status = 0
     cam2.status = 0
     print('Stop Record Time:', (time.ctime(time.time())))
-    print('========================================')
+    print('=======================================')
 
 
 def ConnectDca():
     global sockConfig, FPGA_address_cfg
     print('Connect to DCA1000')
-    print('========================================')
+    print('=======================================')
     config_address = ('192.168.33.30', 4096)
     FPGA_address_cfg = ('192.168.33.180', 4096)
     cmd_order = ['9', 'E', '3', 'B', '5', '6']
@@ -150,44 +157,59 @@ def ConnectDca():
         msg, server = sockConfig.recvfrom(2048)
         # print('receive command:', msg.hex())
 
+
+def SelectFolder():
+    root = tk.Tk()
+    root.withdraw()
+    file_path = filedialog.asksaveasfilename(parent=root, initialdir='E:/ResearchData/ThuMouseData')
+    return file_path
+
+
 def SaveData():
     global savefilename, sockConfig, FPGA_address_cfg
     set_radar.StopRadar()
     # sockConfig.sendto(send_cmd('6'), FPGA_address_cfg)
     # sockConfig.close()
-    name = savefilename.toPlainText()
-    print('========================================')
-    print('File Name:', name)
-    print('========================================')
-    data_save = []
-    while not rawData.empty():
-        tmp = rawData.get()
-        data_save.append(tmp)
-    # print('Radar data size:', np.shape(data_save))
-    # np.save('../data/0201/Frame/raw.npy', data_save)
-    print('Radar File Size', np.shape(data_save)[0])
-    print('========================================')
-    cam_save = []
-    while not cam_rawData.empty():
-        tmp = cam_rawData.get()
-        cam_save.append(tmp)
-    # print('Camera data size', np.shape(cam_save))
-    # np.save('../data/0201/Frame/cam_raw.npy', cam_save)
-    print('Camera 1 File Size:', np.shape(cam_save)[0])
-    print('========================================')
-    cam_save2 = []
-    while not cam_rawData2.empty():
-        tmp = cam_rawData2.get()
-        cam_save2.append(tmp)
-    # print('Camera data size', np.shape(cam_save))
-    # np.save('../data/0201/Frame/cam_raw.npy', cam_save)
-    print('Camera 2 File Size:', np.shape(cam_save2)[0])
-    print('========================================')
-    print('Save File Done')
-    print('========================================')
-    if not RDIData.empty():
-        RDIData.get()
-    img_rdi.clear()
+    path = SelectFolder()
+    if path:
+        savefilename.setText('Save File Path & Name: ' + path)
+        # name = savefilename.toPlainText()
+        print('=======================================')
+        print('File Save Radar:', path + '_rawdata')
+        print('File Same Cam1:', path + '_cam1')
+        print('File Same Cam2:', path + '_cam2')
+        print('=======================================')
+        data_save = []
+        while not rawData.empty():
+            tmp = rawData.get()
+            data_save.append(tmp)
+        np.save(path + '_rawdata', data_save)
+        print('Radar File Size', np.shape(data_save)[0])
+        print('=======================================')
+        cam_save = []
+        while not cam_rawData.empty():
+            tmp = cam_rawData.get()
+            cam_save.append(tmp)
+        np.save(path + '_cam1', cam_save)
+        print('Camera 1 File Size:', np.shape(cam_save)[0])
+        print('=======================================')
+        cam_save2 = []
+        while not cam_rawData2.empty():
+            tmp = cam_rawData2.get()
+            cam_save2.append(tmp)
+        np.save(path  + '_cam2', cam_save2)
+        print('Camera 2 File Size:', np.shape(cam_save2)[0])
+        print('=======================================')
+        print('Save File Done')
+        print('=======================================')
+
+        while not BinData.empty():
+            zz = BinData.get()
+        print('Clear Bin Queue')
+        print('=======================================')
+
+        img_rdi.clear()
+        img_cam.clear()
 
 
 def plot():
@@ -203,19 +225,22 @@ def plot():
     view_rdi = ui.graphicsView.addViewBox()
     view_rai = ui.graphicsView_2.addViewBox()
     view_cam = ui.graphicsView_3.addViewBox()
+
     # view_angCurve = ui.graphicsView_3.addViewBox()
+
     starbtn = ui.pushButton_start
     exitbtn = ui.pushButton_exit
     recordbtn = ui.pushButton_record
     stoprecordbtn = ui.pushButton_stop_record
     savebtn = ui.pushButton_save
     dcabtn = ui.pushButton_DCA
-    savefilename = ui.textEdit
+    savefilename = ui.label_3
+    # savefilename = ui.textEdit
     # ---------------------------------------------------
     # lock the aspect ratio so pixels are always square
     view_rdi.setAspectLocked(True)
     view_rai.setAspectLocked(True)
-    view_cam.setAspectLocked(True)
+    # view_cam.setAspectLocked(True)
     img_rdi = pg.ImageItem(border='w')
     img_rai = pg.ImageItem(border='w')
     img_cam = pg.ImageItem(border='w')
@@ -254,6 +279,7 @@ def plot():
     view_rai.addItem(img_rai)
     view_cam.addItem(img_cam)
     # view_angCurve.addItem(ang_cuv)
+
     # Set initial view bounds
     view_rdi.setRange(QtCore.QRectF(-5, 0, 140, 80))
     view_rai.setRange(QtCore.QRectF(10, 0, 160, 80))
@@ -266,9 +292,11 @@ def plot():
     exitbtn.clicked.connect(app.instance().exit)
     app.instance().exec_()
     set_radar.StopRadar()
+    print('=======================================')
 
 
 if __name__ == '__main__':
+    print('======Real Time Data Capture Tool======')
     count = 0
     # Queue for access data
     BinData = Queue()
@@ -299,15 +327,13 @@ if __name__ == '__main__':
 
 
     lock = threading.Lock()
-    cam1 = CamCapture(0, 'First', 0, lock, CAMData, cam_rawData, mode=1)
-    cam2 = CamCapture(1, 'Second', 1, lock, CAMData2, cam_rawData2, mode=1)
-
-    # cam2 = CamCapture(1, 'Second', 1, lock, 1)
+    # cam1 = CamCapture(1, 'First', 1, lock, CAMData, cam_rawData, mode=1)
+    cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1)
 
     collector = UdpListener('Listener', BinData, frame_length, address, buff_size, rawData)
     processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, 0, "0105", status=0)
 
-    cam1.start()
+    # cam1.start()
     cam2.start()
     collector.start()
     processor.start()
@@ -318,7 +344,7 @@ if __name__ == '__main__':
     # sockConfig.close()
     collector.join(timeout=1)
     processor.join(timeout=1)
-    cam1.close()
+    # cam1.close()
     cam2.close()
 
     print("Program Close")
