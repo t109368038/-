@@ -191,6 +191,7 @@ def naive_xyz(virtual_ant, num_tx=2, num_rx=4, fft_size=64):
     y_vector = np.sqrt(1 - x_vector ** 2 - z_vector ** 2)
     return x_vector, y_vector, z_vector
 data = 'E:/ResearchData/ThuMouseData/TEST/'
+# name = '3t4r'
 name = 'thumb_0302'
 radar_data = np.load(data + name + '_rawdata.npy')
 
@@ -199,7 +200,7 @@ chirp_num = 32
 tx_num = 2
 adc_sample = 64
 
-radar_frame1 = radar_data[0]
+radar_frame1 = radar_data[50]
 # Reshape Radar Data Cube
 radar_frame1 = np.reshape(radar_frame1, [-1, 4])
 radar_frame1 = radar_frame1[:, 0:2:] + 1j * radar_frame1[:, 2::]
@@ -260,6 +261,8 @@ detObj2D = peak_grouping_along_doppler(detObj2DRaw, radarcube_raw_1, 128)
 SNRThresholds2 = np.array([[2, 23], [10, 11.5], [35, 16.0]])
 peakValThresholds2 = np.array([[4, 275], [1, 400], [500, 0]])
 detObj2D = range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 64, 0.5, 3.75)
+
+
 
 # azimuthInput = aoa_input[detObj2D['rangeIdx'], :, detObj2D['dopplerIdx']]
 #

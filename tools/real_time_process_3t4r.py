@@ -1,11 +1,11 @@
 import threading as th
 import numpy as np
 import socket
-import DSP
+import DSP_2t4r
 
 
 class UdpListener(th.Thread):
-    def __init__(self, name, bin_data, data_frame_length, data_address, buff_size):
+    def __init__(self, name, bin_data, data_frame_length, data_address, buff_size, save_data):
         """
         :param name: str
                         Object name
@@ -27,6 +27,8 @@ class UdpListener(th.Thread):
         self.frame_length = data_frame_length
         self.data_address = data_address
         self.buff_size = buff_size
+        self.save_data = save_data
+        self.status = 0
 
     def run(self):
         # convert bytes to data type int16
@@ -38,8 +40,9 @@ class UdpListener(th.Thread):
         count_frame = 0
         data_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         data_socket.bind(self.data_address)
-        print("Create socket successfully")
-        print("Now start data streaming")
+        print("Create Data Socket Successfully")
+        print("Waiting For The Data Stream")
+        print('=======================================')
         # main loop
         while True:
             data, addr = data_socket.recvfrom(self.buff_size)
@@ -48,15 +51,21 @@ class UdpListener(th.Thread):
             # while np_data length exceeds frame length, do following
             if len(np_data) >= self.frame_length:
                 count_frame += 1
+                # print(self.frame_length)
                 # print("Frame No.", count_frame)
                 # put one frame data into bin data array
+                if self.status == 1:
+                    # print(self.status)
+
+                    # print("Frame No.", count_frame)
+                    self.save_data.put(np_data[0:self.frame_length])
                 self.bin_data.put(np_data[0:self.frame_length])
                 # remove one frame length data from array
                 np_data = np_data[self.frame_length:]
 
 
 class DataProcessor(th.Thread):
-    def __init__(self, name, config, bin_queue, rdi_queue, rai_queue):
+    def __init__(self, name, config, bin_queue, rdi_queue, rai_queue, raw_queue=None, file_name=0, status=0):
         """
         :param name: str
                         Object name
@@ -86,6 +95,19 @@ class DataProcessor(th.Thread):
         self.bin_queue = bin_queue
         self.rdi_queue = rdi_queue
         self.rai_queue = rai_queue
+        self.raw_queue = raw_queue
+        self.filename = file_name
+        self.status = status
+        self.weight_matrix = np.zeros([181, 8], dtype=complex)
+        self.out_matrix = np.zeros([8192, 181], dtype=complex)
+        Fc = 77.2e9
+        count = 0
+        lambda_start = 3e8 / Fc
+        for theta in range(-90, 91):
+            d = 0.5 * lambda_start * np.sin(theta * np.pi / 180)
+            beamforming_factor = np.array([0, d, 2 * d, 3 * d, 4 * d, 5 * d, 6 * d, 7 * d]) / (3e8 / Fc)
+            self.weight_matrix[count, :] = np.exp(-1j * 2 * np.pi * beamforming_factor)
+            count += 1
 
     def run(self):
         frame_count = 0
@@ -93,14 +115,14 @@ class DataProcessor(th.Thread):
             data = self.bin_queue.get()
             data = np.reshape(data, [-1, 4])
             data = data[:, 0:2:] + 1j * data[:, 2::]
-            data = np.reshape(data, [self.chirp_num * self.tx_num, -1, self.adc_sample])
+            data = np.reshape(data, [self.chirp_num * self.tx_num, 4, self.adc_sample])
             data = data.transpose([0, 2, 1])
-            ch1_data = data[0: 64: 2, :, :]
-            ch3_data = data[1: 64: 2, :, :]
-            # ch2_data = data[2: 96: 3, :, :]
-            data = np.concatenate([ch1_data, ch3_data], axis=2)
+            ch1_data = data[0:self.chirp_num * self.tx_num:3, :, :]
+            ch3_data = data[1:self.chirp_num * self.tx_num:3, :, :]
+            ch2_data = data[2:self.chirp_num * self.tx_num:3, :, :]
+            data = np.concatenate([ch1_data, ch3_data, ch2_data], axis=2)
             frame_count += 1
-            rdi = DSP.Range_Doppler(ch1_data, mode=1, padding_size=[128, 64])
-            rai = DSP.Range_Angle(data[:, :, 0:4], mode=1, padding_size=[128, 64, 64])
+            rdi = DSP_2t4r.Range_Doppler(ch2_data, mode=1, padding_size=[128, 64])
+            # rai = DSP_2t4r.Range_Angle(data[:, :, 0:4], mode=1, padding_size=[128, 64, 64])
             self.rdi_queue.put(rdi)
-            self.rai_queue.put(rai)
+            # self.rai_queue.put(rai)

@@ -1,4 +1,4 @@
-from real_time_process_2t4r import UdpListener, DataProcessor
+from real_time_process_3t4r import UdpListener, DataProcessor
 from CameraCapture import CamCapture
 from scipy import signal
 from radar_config import SerialConfig
@@ -19,8 +19,11 @@ import cv2
 # -----------------------------------------------
 from app_layout_2t4r import Ui_MainWindow
 # -----------------------------------------------
-# config = '../radar_config/IWR1843_cfg_2t4r_70MHz.cfg'
-config = '../radar_config/IWR1843_cfg_2t4r.cfg'
+config = '../radar_config/IWR1843_cfg_3t4r_v3.4_1.cfg'
+# config = '../radar_config/xwr18xx_profile_2021_03_09T10_45_11_974.cfg'
+# config = '../radar_config/IWR1843_3d.cfg'
+# config = '../radar_config/xwr18xx_profile_2021_03_05T07_10_37_413.cfg'
+
 set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM4', BaudRate=115200)
 
 
@@ -76,7 +79,7 @@ def send_cmd(code):
         re = stop_record
     else:
         re = 'NULL'
-    # print('send command:', re.hex())
+    print('send command:', re.hex())
     return re
 
 
@@ -127,7 +130,7 @@ def StartRecord():
     # processor.status = 1
     collector.status = 1
     # cam1.status = 1
-    cam2.status = 1
+    # cam2.status = 1
     print('Start Record Time:', (time.ctime(time.time())))
     print('=======================================')
 
@@ -136,7 +139,7 @@ def StopRecord():
     # processor.status = 0
     collector.status = 0
     # cam1.status = 0
-    cam2.status = 0
+    # cam2.status = 0
     print('Stop Record Time:', (time.ctime(time.time())))
     print('=======================================')
 
@@ -310,8 +313,8 @@ if __name__ == '__main__':
     cam_rawData2 = Queue()
     # Radar config
     adc_sample = 64
-    chirp = 32
-    tx_num = 2
+    chirp = 16
+    tx_num = 3
     rx_num = 4
     radar_config = [adc_sample, chirp, tx_num, rx_num]
     frame_length = adc_sample * chirp * tx_num * rx_num * 2
@@ -329,13 +332,13 @@ if __name__ == '__main__':
 
     lock = threading.Lock()
     # cam1 = CamCapture(1, 'First', 1, lock, CAMData, cam_rawData, mode=1)
-    cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1)
+    # cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1)
 
     collector = UdpListener('Listener', BinData, frame_length, address, buff_size, rawData)
     processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, 0, "0105", status=0)
 
     # cam1.start()
-    cam2.start()
+    # cam2.start()
     collector.start()
     processor.start()
     plotIMAGE = threading.Thread(target=plot())
@@ -346,7 +349,7 @@ if __name__ == '__main__':
     collector.join(timeout=1)
     processor.join(timeout=1)
     # cam1.close()
-    cam2.close()
+    # cam2.close()
 
     print("Program Close")
     sys.exit()
