@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
-import DSP
+import DSP_2t4r
 
 data_folder = '../data/adc_data_3t4r_np_format/'
 data = np.load(data_folder + 'np_3t4r0_0_8_005.npy')
@@ -41,7 +41,7 @@ new_cmp = ListedColormap(colors)
 f = 30
 # data = np.concatenate([data[f, :, :, 0:4], data[f, :, :, 8:12]])
 data = data[f, :, :, 0:4]
-rai = DSP.Range_Angle(data, mode=1, padding_size=[128, 64, 32])
+rai = DSP_2t4r.Range_Angle(data, mode=1, padding_size=[128, 64, 32])
 plt.figure()
 plt.imshow(rai.sum(0), cmap=new_cmp)
 

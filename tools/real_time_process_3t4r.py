@@ -2,6 +2,8 @@ import threading as th
 import numpy as np
 import socket
 import DSP_2t4r
+import mmwave as mm
+from mmwave.dsp.utils import Window
 
 
 class UdpListener(th.Thread):
@@ -112,17 +114,143 @@ class DataProcessor(th.Thread):
     def run(self):
         frame_count = 0
         while True:
-            data = self.bin_queue.get()
-            data = np.reshape(data, [-1, 4])
-            data = data[:, 0:2:] + 1j * data[:, 2::]
-            data = np.reshape(data, [self.chirp_num * self.tx_num, 4, self.adc_sample])
-            data = data.transpose([0, 2, 1])
-            ch1_data = data[0:self.chirp_num * self.tx_num:3, :, :]
-            ch3_data = data[1:self.chirp_num * self.tx_num:3, :, :]
-            ch2_data = data[2:self.chirp_num * self.tx_num:3, :, :]
-            data = np.concatenate([ch1_data, ch3_data, ch2_data], axis=2)
-            frame_count += 1
-            rdi = DSP_2t4r.Range_Doppler(ch2_data, mode=1, padding_size=[128, 64])
-            # rai = DSP_2t4r.Range_Angle(data[:, :, 0:4], mode=1, padding_size=[128, 64, 64])
-            self.rdi_queue.put(rdi)
-            # self.rai_queue.put(rai)
+            # data = self.bin_queue.get()
+            # data = np.reshape(data, [-1, 4])
+            # data = data[:, 0:2:] + 1j * data[:, 2::]
+            # data = np.reshape(data, [self.chirp_num * self.tx_num, 4, self.adc_sample])
+            # data = data.transpose([0, 2, 1])
+            # ch1_data = data[0:self.chirp_num * self.tx_num:3, :, :]
+            # ch3_data = data[1:self.chirp_num * self.tx_num:3, :, :]
+            # ch2_data = data[2:self.chirp_num * self.tx_num:3, :, :]
+            # data = np.concatenate([ch1_data, ch3_data, ch2_data], axis=2)
+            # frame_count += 1
+            # rdi = DSP_2t4r.Range_Doppler(ch2_data, mode=1, padding_size=[128, 64])
+            # # rai = DSP_2t4r.Range_Angle(data[:, :, 0:4], mode=1, padding_size=[128, 64, 64])
+            # self.rdi_queue.put(rdi)
+            # # self.rai_queue.put(rai)
+
+            range_resolution, bandwidth = mm.dsp.range_resolution(64)
+            doppler_resolution = mm.dsp.doppler_resolution(bandwidth)
+
+            raw_data = self.bin_queue.get()
+            data = np.reshape(raw_data, [-1, 4])
+            frame = data[:, 0:2:] + 1j * data[:, 2::]
+            frame = frame.reshape(self.chirp_num * self.tx_num, self.rx_num, self.adc_sample)
+
+
+
+            radar_cube = mm.dsp.range_processing(frame, window_type_1d=Window.HANNING)
+
+            assert radar_cube.shape == (
+                3*16, 4, 64), "[ERROR] Radar cube is not the correct shape!"
+
+            det_matrix, aoa_input = mm.dsp.doppler_processing(radar_cube, num_tx_antennas=3,
+                                                              clutter_removal_enabled=False)
+
+
+
+            # (4) Object Detection
+            fft2d_sum = det_matrix.astype(np.int64)
+            thresholdDoppler, noiseFloorDoppler = np.apply_along_axis(func1d=mm.dsp.ca_,
+                                                                      axis=0,
+                                                                      arr=fft2d_sum.T,
+                                                                      l_bound=1.5,
+                                                                      guard_len=4,
+                                                                      noise_len=16)
+
+            thresholdRange, noiseFloorRange = np.apply_along_axis(func1d=mm.dsp.ca_,
+                                                                  axis=0,
+                                                                  arr=fft2d_sum,
+                                                                  l_bound=2.5,
+                                                                  guard_len=4,
+                                                                  noise_len=16)
+
+            thresholdDoppler, noiseFloorDoppler = thresholdDoppler.T, noiseFloorDoppler.T
+            det_doppler_mask = (det_matrix > thresholdDoppler)
+            det_range_mask = (det_matrix > thresholdRange)
+            # Get indices of detected peaks
+            full_mask = (det_doppler_mask & det_range_mask)
+            det_peaks_indices = np.argwhere(full_mask == True)
+
+            # peakVals and SNR calculation
+            peakVals = fft2d_sum[det_peaks_indices[:, 0], det_peaks_indices[:, 1]]
+            snr = peakVals - noiseFloorRange[det_peaks_indices[:, 0], det_peaks_indices[:, 1]]
+
+            dtype_location = '(' + str(3) + ',)<f4'
+            dtype_detObj2D = np.dtype({'names': ['rangeIdx', 'dopplerIdx', 'peakVal', 'location', 'SNR'],
+                                       'formats': ['<i4', '<i4', '<f4', dtype_location, '<f4']})
+            detObj2DRaw = np.zeros((det_peaks_indices.shape[0],), dtype=dtype_detObj2D)
+            detObj2DRaw['rangeIdx'] = det_peaks_indices[:, 0].squeeze()
+            detObj2DRaw['dopplerIdx'] = det_peaks_indices[:, 1].squeeze()
+            detObj2DRaw['peakVal'] = peakVals.flatten()
+            detObj2DRaw['SNR'] = snr.flatten()
+
+
+            # Further peak pruning. This increases the point cloud density but helps avoid having too many detections around one object.
+            detObj2DRaw = mm.dsp.prune_to_peaks(detObj2DRaw, det_matrix, 16, reserve_neighbor=True)
+
+            # --- Peak Grouping
+            detObj2D = mm.dsp.peak_grouping_along_doppler(detObj2DRaw, det_matrix, 16)
+            SNRThresholds2 = np.array([[2, 23], [10, 11.5], [35, 16.0]])
+            peakValThresholds2 = np.array([[4, 275], [1, 400], [500, 0]])
+            detObj2D = mm.dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 64, 0.5, range_resolution)
+            # print(detObj2D)
+
+            aa = det_matrix
+            # print(np.shape(aa))
+
+            # print(detObj2D[0:2])
+            range_index = detObj2D['rangeIdx']
+            doppler_index = detObj2D['dopplerIdx']
+            # print(range_doppler_index)
+            if len(detObj2D) != 0:
+                # print(len(detObj2D))
+                for t in range(len(np.shape(detObj2D))):
+                    aa[range_index[t], doppler_index[t]] = 250
+            self.rdi_queue.put(aa)
+
+            #
+            # azimuthInput = aoa_input[detObj2D['rangeIdx'], :, detObj2D['dopplerIdx']]
+            # # print(azimuthInput)
+            # x, y, z = mm.dsp.naive_xyz(azimuthInput.T)
+            # xyzVecN = np.zeros((3, x.shape[0]))
+            # xyzVecN[0] = x * range_resolution * detObj2D['rangeIdx']
+            # xyzVecN[1] = y * range_resolution * detObj2D['rangeIdx']
+            # xyzVecN[2] = z * range_resolution * detObj2D['rangeIdx']
+            #
+            #
+            # Psi, Theta, Ranges, xyzVec = mm.dsp.beamforming_naive_mixed_xyz(azimuthInput, detObj2D['rangeIdx'],
+            #                                                          range_resolution, method='Bartlett')
+            #
+            # # (5) 3D-Clustering
+            # # detObj2D must be fully populated and completely accurate right here
+            # numDetObjs = detObj2D.shape[0]
+            # dtf = np.dtype({'names': ['rangeIdx', 'dopplerIdx', 'peakVal', 'location', 'SNR'],
+            #                 'formats': ['<f4', '<f4', '<f4', dtype_location, '<f4']})
+            # detObj2D_f = detObj2D.astype(dtf)
+            # detObj2D_f = detObj2D_f.view(np.float32).reshape(-1, 7)
+            #
+            # # Fully populate detObj2D_f with correct info
+            # for i, currRange in enumerate(Ranges):
+            #     if i >= (detObj2D_f.shape[0]):
+            #         # copy last row
+            #         detObj2D_f = np.insert(detObj2D_f, i, detObj2D_f[i - 1], axis=0)
+            #     if currRange == detObj2D_f[i][0]:
+            #         detObj2D_f[i][3] = xyzVec[0][i]
+            #         detObj2D_f[i][4] = xyzVec[1][i]
+            #         detObj2D_f[i][5] = xyzVec[2][i]
+            #     else:  # Copy then populate
+            #         detObj2D_f = np.insert(detObj2D_f, i, detObj2D_f[i - 1], axis=0)
+            #         detObj2D_f[i][3] = xyzVec[0][i]
+            #         detObj2D_f[i][4] = xyzVec[1][i]
+            #         detObj2D_f[i][5] = xyzVec[2][i]
+            #
+            #         # radar_dbscan(epsilon, vfactor, weight, numPoints)
+            # #        cluster = radar_dbscan(detObj2D_f, 1.7, 3.0, 1.69 * 1.7, 3, useElevation=True)
+            # if len(detObj2D_f) > 0:
+            #     cluster = mm.clustering.radar_dbscan(detObj2D_f, 0, doppler_resolution, use_elevation=True)
+            #
+            #     cluster_np = np.array(cluster['size']).flatten()
+            #     if cluster_np.size != 0:
+            #         if max(cluster_np) > max_size:
+            #             max_size = max(cluster_np)

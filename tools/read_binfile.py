@@ -119,6 +119,12 @@ def read_bin_file(file_name, config, mode=0, header=True, packet_num=1443):
                 cdata = np.transpose(cdata, [1, 2, 3, 0])
                 return cdata  # frame, chirp, sample, channel
 
+    elif mode == 2:
+        data = np.reshape(data, [-1, 4])
+        data = data[:, 0:2:] + 1j * data[:, 2::]
+        data = np.reshape(data, [frame, chirp * tx_num, rx_num, sample])
+        return data
+
     else:
         raise ValueError
 

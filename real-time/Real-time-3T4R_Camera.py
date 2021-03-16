@@ -79,7 +79,7 @@ def send_cmd(code):
         re = stop_record
     else:
         re = 'NULL'
-    print('send command:', re.hex())
+    # print('send command:', re.hex())
     return re
 
 
@@ -89,7 +89,8 @@ def update_figure():
     # cfar_rai = CA_CFAR(win_param, threshold=2.5, rd_size=[64, 181])
     if not RDIData.empty():
         rd = RDIData.get()
-        img_rdi.setImage(rd[:, :, 0].T, levels=[0, 2.6e4])
+        # img_rdi.setImage(rd[:, :, 0].T, levels=[0, 2.6e4])
+        img_rdi.setImage(np.rot90(np.fft.fftshift(rd, axes=1), 3))
         # img_rdi.setImage(np.abs(RDIData.get()[:, :, 0].T))
         # img_rai.setImage(cfar_rai(np.fliplr(RAIData.get()[0, :, :])).T)
         # ang_cuv.setData(rd[:, :, 0].sum(1))
