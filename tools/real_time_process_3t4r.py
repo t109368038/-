@@ -203,10 +203,10 @@ class DataProcessor(th.Thread):
             range_index = detObj2D['rangeIdx']
             doppler_index = detObj2D['dopplerIdx']
             # print(range_doppler_index)
-            if len(detObj2D) != 0:
-                # print(len(detObj2D))
-                for t in range(len(np.shape(detObj2D))):
-                    aa[range_index[t], doppler_index[t]] = 250
+            # if len(detObj2D) != 0:
+            #     # print(len(detObj2D))
+            #     for t in range(len(np.shape(detObj2D))):
+            #         aa[range_index[t], doppler_index[t]] = 250
             self.rdi_queue.put(aa)
 
             #

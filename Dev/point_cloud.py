@@ -215,6 +215,9 @@ radarcube_raw, radarcube = Range_Doppler(radar_frame1, 2, padding_size=[128, 64]
 radarcube_raw_1 = radarcube_raw[:, :, 0].T
 aoa_input = radarcube_raw[:, :, 0].T
 radarcube_raw_1 = np.abs(radarcube_raw_1)
+
+
+
 # Object Detection
 # CFAR, SNR
 fft2d_sum = radarcube_raw_1.astype(np.int64)
