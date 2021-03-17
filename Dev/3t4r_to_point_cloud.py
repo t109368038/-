@@ -112,12 +112,12 @@ plotCustomPlt = False
 
 plotMakeMovie = True
 makeMovieTitle = " "
-makeMovieDirectory = "./0316_1.mp4"
+makeMovieDirectory = "./0317_1.mp4"
 visTrigger = plot2DscatterXY + plot2DscatterXZ + plot3Dscatter + plotRangeDopp + plotCustomPlt
 
 data_path = 'E:/ResearchData/ThuMouseData/'
 # file_name = '0316_hand_rawdata.npy'
-file_name = '8_v_rawdata.npy'
+file_name = '1_rawdata.npy'
 
 data = np.load(data_path + file_name)
 radarcube = np.apply_along_axis(ReshapeRadarCube, 1, data, 3, 16, 4, 64)
@@ -127,7 +127,7 @@ radarcube = np.apply_along_axis(ReshapeRadarCube, 1, data, 3, 16, 4, 64)
 numTxAntennas = 3
 max_size = 0
 ims = []
-
+count = 0
 # (1.5) Required Plot Declarations
 if plot2DscatterXY or plot2DscatterXZ:
     fig, axes = plt.subplots(1, 2)
@@ -196,7 +196,7 @@ for i, frame in enumerate(radarcube):
     peakValThresholds2 = np.array([[4, 275], [1, 400], [500, 0]])
     numRangeBins = 128
     range_resolution = 0.04
-    detObj2D = dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, numRangeBins, 0.5, range_resolution)
+    # detObj2D = dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, numRangeBins, 0.0, range_resolution)
 
     # azimuth_input = azimuth_angle[]
     azimuth_input = aoa_input[detObj2D['rangeIdx'], :, detObj2D['dopplerIdx']]
@@ -236,6 +236,7 @@ for i, frame in enumerate(radarcube):
     #        cluster = radar_dbscan(detObj2D_f, 1.7, 3.0, 1.69 * 1.7, 3, useElevation=True)
     doppler_resolution = 0.04
     if len(detObj2D_f) > 0:
+        count+=1
         cluster = clu.radar_dbscan(detObj2D_f, 0, doppler_resolution, use_elevation=True)
 
         cluster_np = np.array(cluster['size']).flatten()
@@ -314,6 +315,7 @@ for i, frame in enumerate(radarcube):
         else:
             sys.exit("Unknown plot options.")
 
+print(count)
 plt.rcParams['animation.ffmpeg_path'] = 'C:/Users/lab210/Downloads/ffmpeg-2021-03-14-git-1d61a31497-full_build/bin/ffmpeg.exe'
 if visTrigger and plotMakeMovie:
     movieMaker(fig, ims, makeMovieTitle, makeMovieDirectory)
