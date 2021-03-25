@@ -94,11 +94,11 @@ def movieMaker(fig, ims, title, save_dir):
 
     # Set up formatting for the Range Azimuth heatmap movies
     Writer = animation.writers['ffmpeg']
-    writer = Writer(fps=10, metadata=dict(artist='Me'), bitrate=1800)
+    writer = Writer(fps=5, metadata=dict(artist='Me'), bitrate=1800)
 
     plt.title(title)
     print('Done')
-    im_ani = animation.ArtistAnimation(fig, ims, interval=50, repeat_delay=3000, blit=True)
+    im_ani = animation.ArtistAnimation(fig, ims, interval=100, repeat_delay=3000, blit=True)
     print('Check')
     im_ani.save(save_dir, writer=writer)
     print('Complete')
@@ -112,7 +112,7 @@ plotCustomPlt = False
 
 plotMakeMovie = True
 makeMovieTitle = " "
-makeMovieDirectory = "./0317_1.mp4"
+makeMovieDirectory = "./0323_1.mp4"
 visTrigger = plot2DscatterXY + plot2DscatterXZ + plot3Dscatter + plotRangeDopp + plotCustomPlt
 
 data_path = 'E:/ResearchData/ThuMouseData/'
@@ -133,7 +133,7 @@ if plot2DscatterXY or plot2DscatterXZ:
     fig, axes = plt.subplots(1, 2)
 elif plot3Dscatter and plotMakeMovie:
     fig = plt.figure()
-    nice = Axes3D(fig)
+    nice = fig.add_subplot(111, projection='3d')
 elif plot3Dscatter:
     fig = plt.figure()
 elif plotRangeDopp:
@@ -141,7 +141,9 @@ elif plotRangeDopp:
 elif plotCustomPlt:
     print("Using Custom Plotting")
 
+print('Total frame:', radarcube.shape[0])
 for i, frame in enumerate(radarcube):
+    print('Current frame:', str(i))
     rangedoppler = DSP_2t4r.Range_Doppler(frame, 0, [128, 64])
     rangedoppler = rangedoppler.transpose([0, 2, 1])
     # cmoval = dsp.clutter_removal(rangedoppler)
@@ -201,13 +203,15 @@ for i, frame in enumerate(radarcube):
     # azimuth_input = azimuth_angle[]
     azimuth_input = aoa_input[detObj2D['rangeIdx'], :, detObj2D['dopplerIdx']]
     x, y, z = dsp.naive_xyz(azimuth_input.T)
-    xyzVecN = np.zeros((3, x.shape[0]))
+    xyzVecN = np.zeros((4, x.shape[0]))
     xyzVecN[0] = x * range_resolution * detObj2D['rangeIdx']
     xyzVecN[1] = y * range_resolution * detObj2D['rangeIdx']
     xyzVecN[2] = z * range_resolution * detObj2D['rangeIdx']
+    xyzVecN[3] = detObj2D['dopplerIdx']
 
-    Psi, Theta, Ranges, xyzVec = dsp.beamforming_naive_mixed_xyz(azimuth_input, detObj2D['rangeIdx'],
-                                                                     range_resolution, method='Bartlett')
+    Psi, Theta, Ranges, velocity, xyzVec = dsp.beamforming_naive_mixed_xyz(azimuth_input, detObj2D['rangeIdx'],
+                                                                           detObj2D['dopplerIdx'], range_resolution,
+                                                                           method='Bartlett')
 
     # (5) 3D-Clustering
     # detObj2D must be fully populated and completely accurate right here
@@ -302,14 +306,26 @@ for i, frame in enumerate(radarcube):
             nice.set_xlabel('X Label')
             nice.set_ylabel('Y Label')
             nice.set_zlabel('Z Label')
+            # for i, v in enumerate(velocity):
+            #     if v > 50:
+            #         nice.scatter(xyzVec[0, i], xyzVec[1, i], xyzVec[2, i], c='r', marker='o', s=3)
+            #     elif v > 40:
+            #         nice.scatter(xyzVec[0, i], xyzVec[1, i], xyzVec[2, i], c='y', marker='o', s=3)
+            #     elif v > 30:
+            #         nice.scatter(xyzVec[0, i], xyzVec[1, i], xyzVec[2, i], c='m', marker='o', s=2)
+            #     elif v > 20:
+            #         nice.scatter(xyzVec[0, i], xyzVec[1, i], xyzVec[2, i], c='c', marker='o', s=2)
+            #     else:
+            #         nice.scatter(xyzVec[0, i], xyzVec[1, i], xyzVec[2, i], c='k', marker='o', s=1)
+            # ims.append(nice)
 
-            ims.append((nice.scatter(xyzVec[0], xyzVec[1], xyzVec[2], c='r', marker='o', s=2),))
+            ims.append((nice.scatter(xyzVec[0], xyzVec[1], xyzVec[2], c=xyzVec[3], cmap='Reds', vmin=0, vmax=63, marker='o', s=2),))
 
         # elif plot3Dscatter:
         #     if singFrameView:
         #         ellipse_visualize(fig, cluster, detObj2D_f[:, 3:6])
         #     else:
-        #         ellipse_visualize(fig, cluster, detObj2D_f[:, 3:6])
+        #         ellipse_visualize(fig, cluster, detObj2D_f[:, 3:6
         #         plt.pause(0.1)
         #         plt.clf()
         else:
