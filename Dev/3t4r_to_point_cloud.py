@@ -112,7 +112,7 @@ plotCustomPlt = False
 
 plotMakeMovie = True
 makeMovieTitle = " "
-makeMovieDirectory = "./0323_1.mp4"
+makeMovieDirectory = "E:/ResearchData/ThuMouseData/0330_2.mp4"
 visTrigger = plot2DscatterXY + plot2DscatterXZ + plot3Dscatter + plotRangeDopp + plotCustomPlt
 
 data_path = 'E:/ResearchData/ThuMouseData/'
@@ -194,11 +194,11 @@ for i, frame in enumerate(radarcube):
     # Further peak pruning. This increases the point cloud density but helps avoid having too many detections around one object.
     detObj2DRaw = dsp.prune_to_peaks(detObj2DRaw, detect_matrix, numDopplerBins, reserve_neighbor=True)
     detObj2D = dsp.peak_grouping_along_doppler(detObj2DRaw, detect_matrix, numDopplerBins)
-    SNRThresholds2 = np.array([[2, 23], [10, 11.5], [35, 16.0]])
+    SNRThresholds2 = np.array([[0, 0], [0, 0], [0, 0]])
     peakValThresholds2 = np.array([[4, 275], [1, 400], [500, 0]])
     numRangeBins = 128
     range_resolution = 0.04
-    # detObj2D = dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, numRangeBins, 0.0, range_resolution)
+    detObj2D = dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 15, 0.0, range_resolution)
 
     # azimuth_input = azimuth_angle[]
     azimuth_input = aoa_input[detObj2D['rangeIdx'], :, detObj2D['dopplerIdx']]
@@ -241,7 +241,7 @@ for i, frame in enumerate(radarcube):
     doppler_resolution = 0.04
     if len(detObj2D_f) > 0:
         count+=1
-        cluster = clu.radar_dbscan(detObj2D_f, 0, doppler_resolution, use_elevation=True)
+        cluster = clu.radar_dbscan(detObj2D_f, 1, doppler_resolution, use_elevation=True)
 
         cluster_np = np.array(cluster['size']).flatten()
         if cluster_np.size != 0:
