@@ -114,7 +114,7 @@ plotCustomPlt = False
 
 plotMakeMovie = True
 makeMovieTitle = " "
-makeMovieDirectory = "E:/ResearchData/ThuMouseData/Voxel_origin_without_pruning_dbscan_without_velocity.mp4"
+
 visTrigger = plot2DscatterXY + plot2DscatterXZ + plot3Dscatter + plotRangeDopp + plotCustomPlt
 
 data_path = 'E:/ResearchData/ThuMouseData/'
@@ -202,7 +202,7 @@ for i, frame in enumerate(radarcube):
     range_resolution = 0.04
 
 
-    # detObj2D = dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 15, 0.0, range_resolution)
+    detObj2D = dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 15, 0.0, range_resolution)
 
     # azimuth_input = azimuth_angle[]
     azimuth_input = aoa_input[detObj2D['rangeIdx'], :, detObj2D['dopplerIdx']]
@@ -219,42 +219,49 @@ for i, frame in enumerate(radarcube):
 
     # (5) 3D-Clustering
     # detObj2D must be fully populated and completely accurate right here
-    numDetObjs = detObj2D.shape[0]
-    dtf = np.dtype({'names': ['rangeIdx', 'dopplerIdx', 'peakVal', 'location', 'SNR'],
-                    'formats': ['<f4', '<f4', '<f4', dtype_location, '<f4']})
-    detObj2D_f = detObj2D.astype(dtf)
-    detObj2D_f = detObj2D_f.view(np.float32).reshape(-1, 7)
 
-    # Fully populate detObj2D_f with correct info
-    for j, currRange in enumerate(Ranges):
-        if j >= (detObj2D_f.shape[0]):
-            # copy last row
-            detObj2D_f = np.insert(detObj2D_f, j, detObj2D_f[j - 1], axis=0)
-        if currRange == detObj2D_f[j][0]:
-            detObj2D_f[j][3] = xyzVec[0][j]
-            detObj2D_f[j][4] = xyzVec[1][j]
-            detObj2D_f[j][5] = xyzVec[2][j]
-        else:  # Copy then populate
-            detObj2D_f = np.insert(detObj2D_f, j, detObj2D_f[j - 1], axis=0)
-            detObj2D_f[j][3] = xyzVec[0][j]
-            detObj2D_f[j][4] = xyzVec[1][j]
-            detObj2D_f[j][5] = xyzVec[2][j]
+    # numDetObjs = detObj2D.shape[0]
+    # dtf = np.dtype({'names': ['rangeIdx', 'dopplerIdx', 'peakVal', 'location', 'SNR'],
+    #                 'formats': ['<f4', '<f4', '<f4', dtype_location, '<f4']})
+    # detObj2D_f = detObj2D.astype(dtf)
+    # detObj2D_f = detObj2D_f.view(np.float32).reshape(-1, 7)
+    #
+    # # Fully populate detObj2D_f with correct info
+    # for j, currRange in enumerate(Ranges):
+    #     if j >= (detObj2D_f.shape[0]):
+    #         # copy last row
+    #         detObj2D_f = np.insert(detObj2D_f, j, detObj2D_f[j - 1], axis=0)
+    #     if currRange == detObj2D_f[j][0]:
+    #         detObj2D_f[j][3] = xyzVec[0][j]
+    #         detObj2D_f[j][4] = xyzVec[1][j]
+    #         detObj2D_f[j][5] = xyzVec[2][j]
+    #     else:  # Copy then populate
+    #         detObj2D_f = np.insert(detObj2D_f, j, detObj2D_f[j - 1], axis=0)
+    #         detObj2D_f[j][3] = xyzVec[0][j]
+    #         detObj2D_f[j][4] = xyzVec[1][j]
+    #         detObj2D_f[j][5] = xyzVec[2][j]
 
-    # if i > 1:
-    #     break
+
             # radar_dbscan(epsilon, vfactor, weight, numPoints)
     #        cluster = radar_dbscan(detObj2D_f, 1.7, 3.0, 1.69 * 1.7, 3, useElevation=True)
+
+    from sklearn.cluster import DBSCAN
+
+    xyzVec_copy = xyzVec.T
+    y_pred = DBSCAN(eps=0.2, min_samples=3).fit_predict(xyzVec_copy)
+    # if i > 1:
+    #     break
+
+
     doppler_resolution = 0.04
-    if len(detObj2D_f) > 0:
-        count+=1
-        cluster = clu.radar_dbscan(detObj2D_f, 0, doppler_resolution, use_elevation=True)
-
-        cluster_np = np.array(cluster['size']).flatten()
-        if cluster_np.size != 0:
-            if max(cluster_np) > max_size:
-                max_size = max(cluster_np)
-
-
+    if len(xyzVec[0]) > 0:
+        # count+=1
+        # cluster = clu.radar_dbscan(detObj2D_f, 0, doppler_resolution, use_elevation=True)
+        #
+        # cluster_np = np.array(cluster['size']).flatten()
+        # if cluster_np.size != 0:
+        #     if max(cluster_np) > max_size:
+        #         max_size = max(cluster_np)
 
         # (6) Visualization
         if plotRangeDopp:
@@ -306,9 +313,9 @@ for i, frame in enumerate(radarcube):
                 axes[0].clear()
                 axes[1].clear()
         elif plot3Dscatter and plotMakeMovie:
-            nice.set_zlim3d(bottom=-5, top=5)
-            nice.set_ylim(bottom=0, top=10)
-            nice.set_xlim(left=-4, right=4)
+            nice.set_zlim3d(bottom=-1, top=1)
+            nice.set_ylim(bottom=0, top=2)
+            nice.set_xlim(left=-1, right=1)
             nice.set_xlabel('X Label')
             nice.set_ylabel('Y Label')
             nice.set_zlabel('Z Label')
@@ -325,9 +332,12 @@ for i, frame in enumerate(radarcube):
             #     else:
             #         nice.scatter(xyzVec[0, i], xyzVec[1, i], xyzVec[2, i], c='k', marker='o', s=1)
             # ims.append(nice)
-            np.save('E:/ResearchData/ThuMouseData/Frame/frame' + str(i), xyzVec)
 
-            ims.append((nice.scatter(xyzVec[0], xyzVec[1], xyzVec[2], c=xyzVec[3], cmap='Reds', vmin=0, vmax=63, marker='o', s=2),))
+            cm = plt.cm.get_cmap('RdYlBu')
+
+            test = [-100 if value == -1 else value*10 for value in y_pred]
+
+            ims.append((nice.scatter(xyzVec[0], xyzVec[1], xyzVec[2], c=test, vmin=0, vmax=63, marker='*', s=4),))
 
 
 
@@ -341,14 +351,24 @@ for i, frame in enumerate(radarcube):
         else:
             sys.exit("Unknown plot options.")
 
+        np.save('E:/ResearchData/ThuMouseData/Frame/dbscan/frame' + str(i), xyzVec)
 
-
-
-# np.save('E:/ResearchData/ThuMouseData/Voxel_origin_without_pruning_dbscan_without_velocity_np', vexl_array)
+makeMovieDirectory = "E:/ResearchData/ThuMouseData/Frame/dbscan/Voxel_dbscan_modify.mp4"
 print(count)
 plt.rcParams['animation.ffmpeg_path'] = 'C:/Users/lab210/Downloads/ffmpeg-2021-03-14-git-1d61a31497-full_build/bin/ffmpeg.exe'
 if visTrigger and plotMakeMovie:
     movieMaker(fig, ims, makeMovieTitle, makeMovieDirectory)
+
+
+
+
+
+
+
+
+
+
+
 #     if plotRangeDoppler:
 #         # plt.subplot(1, 2, 1)
 #         plt.imshow(detect_matrix[:, 0, :].T)
