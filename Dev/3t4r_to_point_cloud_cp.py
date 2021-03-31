@@ -204,7 +204,7 @@ for i, frame in enumerate(radarcube):
     range_resolution = 0.04
 
 
-    # detObj2D = dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 15, 0.0, range_resolution)
+    detObj2D = dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 15, 0.0, range_resolution)
 
     # azimuth_input = azimuth_angle[]
     azimuth_input = aoa_input[detObj2D['rangeIdx'], :, detObj2D['dopplerIdx']]
@@ -250,7 +250,7 @@ for i, frame in enumerate(radarcube):
     from sklearn.cluster import DBSCAN
 
     # don't use velocity
-    xyzVec = xyzVec[0:3:, :]
+    # xyzVec = xyzVec[0:3:, :]
 
     xyzVec_copy = xyzVec.T
     y_pred = DBSCAN(eps=0.2, min_samples=3).fit_predict(xyzVec_copy)
@@ -262,7 +262,7 @@ for i, frame in enumerate(radarcube):
     remove_noise_xyzVec = []
     remove_nosie_label = []
     count = 0
-
+    #
     # for k in range(len(xyzVecwith_label)):
     #     if xyzVecwith_label[k, 4] != -1: # v 4 non-v 3
     #         remove_noise_xyzVec.append(xyzVecwith_label[k])
@@ -362,9 +362,9 @@ for i, frame in enumerate(radarcube):
             test2 = [-100 if value == -1 else value*10 for value in remove_nosie_label]
 
             remove_noise_xyzVec = np.array(remove_noise_xyzVec).T
-            # ims.append((nice.scatter(xyzVec[0], xyzVec[1], xyzVec[2], c=xyzVec[3], vmin=0, vmax=63, marker='*', s=4),))
+            ims.append((nice.scatter(xyzVec[0], xyzVec[1], xyzVec[2], c=xyzVec[3], vmin=0, vmax=63, marker='*', s=4),))
 
-            ims.append((nice.scatter(xyzVec[0], xyzVec[1], xyzVec[2], c=test, vmin=0, vmax=63, marker='*', s=4),))
+            # ims.append((nice.scatter(xyzVec[0], xyzVec[1], xyzVec[2], c=test, vmin=0, vmax=63, marker='*', s=4),))
 
             # ims.append((nice.scatter(remove_noise_xyzVec[0], remove_noise_xyzVec[1], remove_noise_xyzVec[2], c=test2, vmin=0, vmax=63, marker='*', s=4),))
 
@@ -381,13 +381,13 @@ for i, frame in enumerate(radarcube):
             sys.exit("Unknown plot options.")
 
         import os
-        save_path = 'E:/ResearchData/ThuMouseData/RESULT0331/handmove/origin_with_DBSCAN_no_velocity/'
+        save_path = 'E:/ResearchData/ThuMouseData/RESULT0331/handmove/pruning/'
         if not os.path.isdir(save_path):
             os.makedirs(save_path)
 
 
-        np.save(save_path + 'frame' + str(i), xyzVec)
-        # np.save(save_path + 'frame' + str(i), remove_noise_xyzVec)
+        # np.save(save_path + 'frame' + str(i), xyzVec)
+        np.save(save_path + 'frame' + str(i), remove_noise_xyzVec)
 
 
 
