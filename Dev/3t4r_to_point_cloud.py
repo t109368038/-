@@ -255,10 +255,14 @@ for i, frame in enumerate(radarcube):
 
 #   remove the noise according to the label generate by DBSCAN
     remove_noise_xyzVec = []
+    remove_nosie_label = []
     count = 0
+
     for k in range(len(xyzVecwith_label)):
         if xyzVecwith_label[k, 4] != -1:
             remove_noise_xyzVec.append(xyzVecwith_label[k])
+            remove_nosie_label.append(xyzVecwith_label[k, 4])
+
 
 
     # if i > 1:
@@ -350,10 +354,11 @@ for i, frame in enumerate(radarcube):
             cm = plt.cm.get_cmap('RdYlBu')
 
             test = [-100 if value == -1 else value*10 for value in y_pred]
-            test2 = [-100 if value == -1 else value*10 for value in remove_noise_xyzVec[4]]
+            test2 = [-100 if value == -1 else value*10 for value in remove_nosie_label]
 
-            # ims.append((nice.scatter(xyzVec[0], xyzVec[1], xyzVec[2], c=test, vmin=0, vmax=63, marker='*', s=4),))
-            ims.append((nice.scatter(remove_noise_xyzVec[0], remove_noise_xyzVec[1], remove_noise_xyzVec[2], c=test2, vmin=0, vmax=63, marker='*', s=4),))
+            remove_noise_xyzVec = np.array(remove_noise_xyzVec).T
+            ims.append((nice.scatter(xyzVec[0], xyzVec[1], xyzVec[2], c=test, vmin=0, vmax=63, marker='*', s=4),))
+            # ims.append((nice.scatter(remove_noise_xyzVec[0], remove_noise_xyzVec[1], remove_noise_xyzVec[2], c=test2, vmin=0, vmax=63, marker='*', s=4),))
 
 
 
@@ -368,7 +373,7 @@ for i, frame in enumerate(radarcube):
             sys.exit("Unknown plot options.")
 
         import os
-        save_path = 'E:/ResearchData/ThuMouseData/Frame/dbscan_remove_noise'
+        save_path = 'E:/ResearchData/ThuMouseData/Frame/dbscan/'
         if not os.path.isdir(save_path):
             os.makedirs(save_path)
 
@@ -377,7 +382,7 @@ for i, frame in enumerate(radarcube):
 
 
 
-makeMovieDirectory = save_path + 'Voxel_dbscan_remove_noise.mp4'
+makeMovieDirectory = save_path + 'Voxel_dbscan.mp4'
 print(count)
 plt.rcParams['animation.ffmpeg_path'] = 'C:/Users/lab210/Downloads/ffmpeg-2021-03-14-git-1d61a31497-full_build/bin/ffmpeg.exe'
 if visTrigger and plotMakeMovie:
