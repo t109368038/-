@@ -249,8 +249,22 @@ for i, frame in enumerate(radarcube):
 
     xyzVec_copy = xyzVec.T
     y_pred = DBSCAN(eps=0.2, min_samples=3).fit_predict(xyzVec_copy)
+
+    label = np.reshape(y_pred, [-1, len(xyzVec[0])])
+    xyzVecwith_label = np.concatenate([xyzVec, label], axis=0)
+
+#   remove the noise according to the label generate by DBSCAN
+    remove_noise_xyzVec = []
+    count = 0
+    for k in range(len(xyzVecwith_label.T)):
+        if xyzVecwith_label[k, 4] != -1:
+            remove_noise_xyzVec.append(xyzVecwith_label[k])
+
+
     # if i > 1:
     #     break
+
+
 
 
     doppler_resolution = 0.04
@@ -337,7 +351,8 @@ for i, frame in enumerate(radarcube):
 
             test = [-100 if value == -1 else value*10 for value in y_pred]
 
-            ims.append((nice.scatter(xyzVec[0], xyzVec[1], xyzVec[2], c=test, vmin=0, vmax=63, marker='*', s=4),))
+            # ims.append((nice.scatter(xyzVec[0], xyzVec[1], xyzVec[2], c=test, vmin=0, vmax=63, marker='*', s=4),))
+            ims.append((nice.scatter(xyzVecwith_label[0], xyzVecwith_label[1], xyzVecwith_label[2], c=test, vmin=0, vmax=63, marker='*', s=4),))
 
 
 
@@ -351,9 +366,17 @@ for i, frame in enumerate(radarcube):
         else:
             sys.exit("Unknown plot options.")
 
-        np.save('E:/ResearchData/ThuMouseData/Frame/dbscan/frame' + str(i), xyzVec)
+        import os
+        save_path = 'E:/ResearchData/ThuMouseData/Frame/dbscan_remove/noise'
+        if not os.path.isdir(save_path):
+            os.makedirs(save_path)
 
-makeMovieDirectory = "E:/ResearchData/ThuMouseData/Frame/dbscan/Voxel_dbscan_modify.mp4"
+
+        np.save('frame' + str(i), xyzVec)
+
+
+
+makeMovieDirectory = save_path + 'Voxel_dbscan_remove_noise.mp4'
 print(count)
 plt.rcParams['animation.ffmpeg_path'] = 'C:/Users/lab210/Downloads/ffmpeg-2021-03-14-git-1d61a31497-full_build/bin/ffmpeg.exe'
 if visTrigger and plotMakeMovie:
