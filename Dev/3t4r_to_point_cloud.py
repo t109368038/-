@@ -251,12 +251,12 @@ for i, frame in enumerate(radarcube):
     y_pred = DBSCAN(eps=0.2, min_samples=3).fit_predict(xyzVec_copy)
 
     label = np.reshape(y_pred, [-1, len(xyzVec[0])])
-    xyzVecwith_label = np.concatenate([xyzVec, label], axis=0)
+    xyzVecwith_label = np.concatenate([xyzVec, label], axis=0).T
 
 #   remove the noise according to the label generate by DBSCAN
     remove_noise_xyzVec = []
     count = 0
-    for k in range(len(xyzVecwith_label.T)):
+    for k in range(len(xyzVecwith_label)):
         if xyzVecwith_label[k, 4] != -1:
             remove_noise_xyzVec.append(xyzVecwith_label[k])
 
@@ -350,9 +350,10 @@ for i, frame in enumerate(radarcube):
             cm = plt.cm.get_cmap('RdYlBu')
 
             test = [-100 if value == -1 else value*10 for value in y_pred]
+            test2 = [-100 if value == -1 else value*10 for value in remove_noise_xyzVec[4]]
 
             # ims.append((nice.scatter(xyzVec[0], xyzVec[1], xyzVec[2], c=test, vmin=0, vmax=63, marker='*', s=4),))
-            ims.append((nice.scatter(xyzVecwith_label[0], xyzVecwith_label[1], xyzVecwith_label[2], c=test, vmin=0, vmax=63, marker='*', s=4),))
+            ims.append((nice.scatter(remove_noise_xyzVec[0], remove_noise_xyzVec[1], remove_noise_xyzVec[2], c=test2, vmin=0, vmax=63, marker='*', s=4),))
 
 
 
@@ -367,12 +368,12 @@ for i, frame in enumerate(radarcube):
             sys.exit("Unknown plot options.")
 
         import os
-        save_path = 'E:/ResearchData/ThuMouseData/Frame/dbscan_remove/noise'
+        save_path = 'E:/ResearchData/ThuMouseData/Frame/dbscan_remove_noise'
         if not os.path.isdir(save_path):
             os.makedirs(save_path)
 
 
-        np.save('frame' + str(i), xyzVec)
+        np.save(save_path + 'frame' + str(i), xyzVec)
 
 
 
