@@ -11,7 +11,17 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QTextEdit
 from pyqtgraph import GraphicsLayoutWidget
-
+class btn_class(object):
+    def __init__(self, widget, obj_name, loc_x, loc_y, w, h):
+        font = QtGui.QFont()
+        font.setFamily("微軟正黑體 Light")
+        font.setBold(True)
+        font.setItalic(False)
+        font.setWeight(75)
+        self.btn = QtWidgets.QPushButton(widget)
+        self.btn.setGeometry(QtCore.QRect(loc_x, loc_y, w,h ))
+        self.btn.setFont(font)
+        self.btn.setObjectName(obj_name)
 class Ui_MainWindow(object):
 
     def setupUi(self, MainWindow):
@@ -125,6 +135,8 @@ class Ui_MainWindow(object):
         self.label_3.setFont(font)
         self.label_3.setObjectName("label_3")
 
+        self.pd_btn = btn_class(self.centralwidget,"pd_btn",1375, 670, 90, 30)
+
         # self.label_4 = QtWidgets.QLabel(self.centralwidget)
         # self.label_4.setGeometry(QtCore.QRect(350, 670, 120, 30))
         # font = QtGui.QFont()
@@ -162,4 +174,4 @@ class Ui_MainWindow(object):
         self.pushButton_stop_record.setText(_translate("MainWindow", "Stop Record"))
         self.pushButton_save.setText(_translate("MainWindow", "Save"))
         self.pushButton_DCA.setText(_translate("MainWindow", "Connect DCA1000"))
-
+        self.pd_btn.btn.setText(_translate("MainWindow", "Point cloud"))

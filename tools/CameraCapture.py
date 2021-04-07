@@ -6,7 +6,7 @@ import sys
 
 
 class CamCapture(th.Thread):
-    def __init__(self, thread_id, name, counter, th_lock, cam_queue=None, save_queue=None, status=0, mode=0):
+    def __init__(self, thread_id, name, counter, th_lock, cam_queue=None, save_queue=None, status=0, mode=0,mp4_path=''):
         th.Thread.__init__(self)
         self.threadID = thread_id
         self.name = name
@@ -17,6 +17,8 @@ class CamCapture(th.Thread):
         self.cam_queue = cam_queue
         self.save_queue = save_queue
         self.status = status
+        self.save_mp4_path = mp4_path
+
         print('Camera Capture Mode:{}'.format(mode))
         print('========================================')
 
@@ -56,6 +58,11 @@ class CamCapture(th.Thread):
             # no mediapipe
             # cv2.namedWindow(self.name)
             self.cam = cv2.VideoCapture(self.counter)
+            sz = (int(self.cam.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.cam.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+            self.fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            self.vout = cv2.VideoWriter()
+            self.vout.open(self.save_mp4_path + 'output'+str(self.counter)+'.mp4', self.fourcc, 20, sz, True)
+
             self.cam.set(cv2.CAP_PROP_FPS, 20)
             fps = int(self.cam.get(5))
             print('FPS:{}'.format(fps))
@@ -80,12 +87,12 @@ class CamCapture(th.Thread):
                     # print(self.status)
                     self.save_queue.put(tmp_frame)
                     self.cam_queue.put(tmp_frame)
+                    self.vout.write(frame)
                 # self.cam_queue.put(tmp_frame)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
             cv2.destroyWindow(self.name)
             self.cam.release()
-            cv2.VideoCapture(0)
             print('Close process')
             print("%s: %s" % (self.name, time.ctime(time.time())))
         else:
@@ -93,6 +100,7 @@ class CamCapture(th.Thread):
 
     def close(self):
         self.cam.release()
+        self.vout.release()
 
 # lock = th.Lock()
 # cam1 = CamCapture(0, 'First', 0, lock, status=0, mode=1)
