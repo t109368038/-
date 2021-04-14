@@ -6,7 +6,7 @@ import mmwave.clustering as clu
 import mmwave.dsp as dsp
 import numpy as np
 from matplotlib import cm
-
+from mpl_toolkits.mplot3d import Axes3D
 import DSP_2t4r
 
 
@@ -133,15 +133,19 @@ elif plotCustomPlt:
     print("Using Custom Plotting")
 
 def plot_pd(frame_data):
+    plt.cla()
     numTxAntennas = 3
     max_size = 0
     ims = []
     count = 0
-    radarcube = np.apply_along_axis(ReshapeRadarCube, 1, frame_data, 3, 16, 4, 64)
+    # radarcube = np.apply_along_axis(ReshapeRadarCube, 1, frame_data, 3, 16, 4, 64)
+    radarcube =np.reshape(frame_data,[16, -1, 64])
+    radarcube =ReshapeRadarCube(frame_data, 3, 16, 4, 64)
     frame = radarcube.copy()
+
     rangedoppler = DSP_2t4r.Range_Doppler(frame, 0, [128, 64])
     rangedoppler = rangedoppler.transpose([0, 2, 1])
-    # cmoval = dsp.clutter_removal(rangedoppler)
+    # rangedoppler = dsp.clutter_removal(rangedoppler)
 
     detect_matrix = np.sum(np.log2(np.abs(np.fft.fftshift(rangedoppler, axes=[0]))), axis=1)
     aoa_input = rangedoppler
@@ -164,17 +168,19 @@ def plot_pd(frame_data):
                                                           l_bound=2.5,
                                                           guard_len=4,
                                                           noise_len=16)
+    # print("thresholdDoppler is : {} ,thresholdRange is :{}".format(np.shape(thresholdDoppler),thresholdRange))
 
     thresholdDoppler, noiseFloorDoppler = thresholdDoppler.T, noiseFloorDoppler.T
 
-    det_doppler_mask = (detect_matrix > thresholdDoppler)
-    det_range_mask = (detect_matrix > thresholdRange)
+    det_doppler_mask = (detect_matrix > thresholdDoppler*0.3)
+    det_range_mask = (detect_matrix > thresholdRange*1.01)
     # Get indices of detected peaks
     full_mask = (det_doppler_mask & det_range_mask)
     det_peaks_indices = np.argwhere(full_mask == True)
 
     # peakVals and SNR calculation
     peakVals = fft2d_sum[det_peaks_indices[:, 0], det_peaks_indices[:, 1]]
+    print(peakVals)
     snr = peakVals - noiseFloorRange[det_peaks_indices[:, 0], det_peaks_indices[:, 1]]
 
     dtype_location = '(' + str(numTxAntennas) + ',)<f4'
@@ -187,13 +193,16 @@ def plot_pd(frame_data):
     detObj2DRaw['SNR'] = snr.flatten()
     numDopplerBins = 64
     # Further peak pruning. This increases the point cloud density but helps avoid having too many detections around one object.
-    detObj2DRaw = dsp.prune_to_peaks(detObj2DRaw, detect_matrix, numDopplerBins, reserve_neighbor=True)
+    detObj2DRaw = dsp.prune_to_peaks(detObj2DRaw, detect_matrix, numDopplerBins, reserve_neighbor=False)
+
     detObj2D = dsp.peak_grouping_along_doppler(detObj2DRaw, detect_matrix, numDopplerBins)
-    SNRThresholds2 = np.array([[0, 0], [0, 0], [0, 0]])
+    SNRThresholds2 = np.array([[3, 14], [0, 0], [0, 0]])
+    # SNRThresholds2 = np.array([[2, 23], [10, 11.5], [35, 16.0]])
+
     peakValThresholds2 = np.array([[4, 275], [1, 400], [500, 0]])
     numRangeBins = 128
     range_resolution = 0.04
-    # detObj2D = dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 15, 0.0, range_resolution)
+    detObj2D = dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 5, 0.0, range_resolution)
 
     # azimuth_input = azimuth_angle[]
     azimuth_input = aoa_input[detObj2D['rangeIdx'], :, detObj2D['dopplerIdx']]
@@ -206,8 +215,7 @@ def plot_pd(frame_data):
 
     Psi, Theta, Ranges, velocity, xyzVec = dsp.beamforming_naive_mixed_xyz(azimuth_input, detObj2D['rangeIdx'],
                                                                            detObj2D['dopplerIdx'], range_resolution,
-                                                                           method='Bartlett')
-
+                                                                              method='Bartlett')
     # (5) 3D-Clustering
     # detObj2D must be fully populated and completely accurate right here
     numDetObjs = detObj2D.shape[0]
@@ -235,13 +243,13 @@ def plot_pd(frame_data):
     #        cluster = radar_dbscan(detObj2D_f, 1.7, 3.0, 1.69 * 1.7, 3, useElevation=True)
     doppler_resolution = 0.04
     if len(detObj2D_f) > 0:
-        count += 1
-        cluster = clu.radar_dbscan(detObj2D_f, 1, doppler_resolution, use_elevation=True)
+        # count += 1
+        # cluster = clu.radar_dbscan(detObj2D_f, 1, doppler_resolution, use_elevation=True)
 
-        cluster_np = np.array(cluster['size']).flatten()
-        if cluster_np.size != 0:
-            if max(cluster_np) > max_size:
-                max_size = max(cluster_np)
+        # cluster_np = np.array(cluster['size']).flatten()
+        # if cluster_np.size != 0:
+        #     if max(cluster_np) > max_size:
+        #         max_size = max(cluster_np)
 
 
 
@@ -294,38 +302,45 @@ def plot_pd(frame_data):
                 plt.pause(0.1)
                 axes[0].clear()
                 axes[1].clear()
-        elif plot3Dscatter and plotMakeMovie:
-            nice.set_zlim3d(bottom=-5, top=5)
-            nice.set_ylim(bottom=0, top=10)
-            nice.set_xlim(left=-4, right=4)
-            nice.set_xlabel('X Label')
-            nice.set_ylabel('Y Label')
-            nice.set_zlabel('Z Label')
-            # for i, v in enumerate(velocity):
-            #     if v > 50:
-            #         nice.scatter(xyzVec[0, i], xyzVec[1, i], xyzVec[2, i], c='r', marker='o', s=3)
-            #     elif v > 40:
-            #         nice.scatter(xyzVec[0, i], xyzVec[1, i], xyzVec[2, i], c='y', marker='o', s=3)
-            #     elif v > 30:
-            #         nice.scatter(xyzVec[0, i], xyzVec[1, i], xyzVec[2, i], c='m', marker='o', s=2)
-            #     elif v > 20:
-            #         nice.scatter(xyzVec[0, i], xyzVec[1, i], xyzVec[2, i], c='c', marker='o', s=2)
-            #     else:
-            #         nice.scatter(xyzVec[0, i], xyzVec[1, i], xyzVec[2, i], c='k', marker='o', s=1)
-            # ims.append(nice)
-            nice.scatter(xyzVec[0], xyzVec[1], xyzVec[2], c=xyzVec[3], cmap='Reds', vmin=0, vmax=63,
-                         marker='o', s=2)
-            plt.show()
-            ims.append((nice.scatter(xyzVec[0], xyzVec[1], xyzVec[2], c=xyzVec[3], cmap='Reds', vmin=0, vmax=63,
-                                     marker='o', s=2),))
+        # elif plot3Dscatter and plotMakeMovie:
+        #     nice.set_zlim3d(bottom=-5, top=5)
+        #     nice.set_ylim(bottom=-5, top=5)
+        #     nice.set_xlim(left=-4, right=4)
+        #     nice.set_xlabel('X Label')
+        #     nice.set_ylabel('Y Label')
+        #     nice.set_zlabel('Z Label')
+        #     # for i, v in enumerate(velocity):
+        #     #     if v > 50:
+        #     #         nice.scatter(xyzVec[0, i], xyzVec[1, i], xyzVec[2, i], c='r', marker='o', s=3)
+        #     #     elif v > 40:
+        #     #         nice.scatter(xyzVec[0, i], xyzVec[1, i], xyzVec[2, i], c='y', marker='o', s=3)
+        #     #     elif v > 30:
+        #     #         nice.scatter(xyzVec[0, i], xyzVec[1, i], xyzVec[2, i], c='m', marker='o', s=2)
+        #     #     elif v > 20:
+        #     #         nice.scatter(xyzVec[0, i], xyzVec[1, i], xyzVec[2, i], c='c', marker='o', s=2)
+        #     #     else:
+        #     #         nice.scatter(xyzVec[0, i], xyzVec[1, i], xyzVec[2, i], c='k', marker='o', s=1)
+        #     # ims.append(nice)
+        #     nice.scatter(xyzVec[0], xyzVec[1], xyzVec[2], c=xyzVec[3], cmap='Reds', vmin=0, vmax=63,
+        #                  marker='o', s=2)
+        #     plt.show()
+        #     plt.pause(0.5)
+        #     ims.append((nice.scatter(xyzVec[0], xyzVec[1], xyzVec[2], c=xyzVec[3], cmap='Reds', vmin=0, vmax=63,
+        #                              marker='o', s=2),))
 
         # elif plot3Dscatter:
         #     if singFrameView:
         #         ellipse_visualize(fig, cluster, detObj2D_f[:, 3:6])
         #     else:
-        #         ellipse_visualize(fig, cluster, detObj2D_f[:, 3:6
+        #         ellipse_visualize(fig, cluster, detObj2D_f[:, 3:6])
         #         plt.pause(0.1)
         #         plt.clf()
         else:
-            sys.exit("Unknown plot options.")
+            return xyzVec[0], xyzVec[1], xyzVec[2], xyzVec[3],rangedoppler
+
+            # sys.exit("Unknown plot options.")
+
+
+        # ellipse_visualize(fig, cluster, detObj2D_f[:, 3:6])
+
 

@@ -10,6 +10,7 @@ import serial
 import pyqtgraph as pg
 import pyqtgraph.ptime as ptime
 from pyqtgraph.Qt import QtCore, QtGui, QtWidgets
+import pyqtgraph.opengl as gl
 import numpy as np
 import threading
 import time
@@ -19,7 +20,7 @@ import cv2
 
 # -----------------------------------------------
 from app_layout_2t4r import Ui_MainWindow
-from 3t4r_to_point_cloud_for_realtime 
+from R3t4r_to_point_cloud_for_realtime import plot_pd
 # -----------------------------------------------
 # config = '../radar_config/IWR1843_cfg_3t4r_v3.4_1.cfg'
 config = '../radar_config/xwr68xx_profile_2021_03_23T08_12_36_405.cfg'
@@ -87,7 +88,7 @@ def send_cmd(code):
 
 
 def update_figure():
-    global count
+    global count,view_rai,p13d
     win_param = [8, 8, 3, 3]
     # cfar_rai = CA_CFAR(win_param, threshold=2.5, rd_size=[64, 181])
     if not RDIData.empty():
@@ -113,7 +114,20 @@ def update_figure():
         # np.save('../data/img/' + str(count), yy)
         img_cam.setImage(np.rot90(yy, -1))
 
+    # --------------- plot 3d ---------------
+    # data = BinData.get()
+    # x,y,z,s  = plot_pd(data)
+    # pos = np.zeros([len(x),4])
+    # pos[:,0] = x
+    # pos[:,1] = y
+    # pos[:,2] = z
+    # pos[:,3] = s
+    # p13d.setData(pos=pos)
+    # z=pg.gaussianFilter(np.random.normal(size=(50, 50)), (1, 1))
+
     QtCore.QTimer.singleShot(1, update_figure)
+    # QtCore.QTimer.singleShot(1, Run_PD())
+
     now = ptime.time()
     updateTime = now
     count += 1
@@ -172,7 +186,10 @@ def SelectFolder():
     file_path = filedialog.asksaveasfilename(parent=root, initialdir='E:')
     return file_path
 
-
+def Run_PD():
+    data = BinData.get()
+    plot_pd(data)
+    return  None
 def SaveData():
     global savefilename, sockConfig, FPGA_address_cfg
     set_radar.StopRadar()
@@ -221,7 +238,7 @@ def SaveData():
 
 
 def plot():
-    global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename
+    global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename,view_rai,p13d
     # ---------------------------------------------------
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
@@ -231,11 +248,24 @@ def plot():
     ui = Ui_MainWindow()
     ui.setupUi(MainWindow)
     view_rdi = ui.graphicsView.addViewBox()
-    view_rai = ui.graphicsView_2.addViewBox()
+    # view_rai = ui.graphicsView_2.addViewBox()
+    view_rai = ui.graphicsView_2
     view_cam = ui.graphicsView_3.addViewBox()
-
-    # view_angCurve = ui.graphicsView_3.addViewBox()
-
+    xgrid = gl.GLGridItem()
+    ygrid = gl.GLGridItem()
+    zgrid = gl.GLGridItem()
+    view_rai.addItem(xgrid)
+    view_rai.addItem(ygrid)
+    view_rai.addItem(zgrid)
+    xgrid.translate(0,0,-10)
+    ygrid.translate(0, 0, 10)
+    zgrid.translate(0, 0, -10)
+    xgrid.rotate(90, 0, 1, 0)
+    ygrid.rotate(90, 1, 0, 0)
+    pos = np.random.randint(-10, 10, size=(1000, 3))
+    pos[:, 2] = np.abs(pos[:, 2])
+    p13d = gl.GLScatterPlotItem(pos = pos)
+    view_rai.addItem(p13d)
     starbtn = ui.pushButton_start
     exitbtn = ui.pushButton_exit
     recordbtn = ui.pushButton_record
@@ -243,12 +273,13 @@ def plot():
     savebtn = ui.pushButton_save
     dcabtn = ui.pushButton_DCA
     savefilename = ui.label_3
+    pd_btn = ui.pd_btn
     # savefilename = ui.textEdit
     # ---------------------------------------------------
     # lock the aspect ratio so pixels are always square
     view_rdi.setAspectLocked(True)
-    view_rai.setAspectLocked(True)
-    # view_cam.setAspectLocked(True)
+    # view_rai.setAspectLocked(True)
+    view_cam.setAspectLocked(True)
     img_rdi = pg.ImageItem(border='w')
     img_rai = pg.ImageItem(border='w')
     img_cam = pg.ImageItem(border='w')
@@ -284,20 +315,23 @@ def plot():
     img_rdi.setLookupTable(lookup_table)
     img_rai.setLookupTable(lookup_table)
     view_rdi.addItem(img_rdi)
-    view_rai.addItem(img_rai)
+    # view_rai.addItem(img_rai)
     view_cam.addItem(img_cam)
     # view_angCurve.addItem(ang_cuv)
 
     # Set initial view bounds
     view_rdi.setRange(QtCore.QRectF(-5, 0, 140, 80))
-    view_rai.setRange(QtCore.QRectF(10, 0, 160, 80))
+    # view_rai.setRange(QtCore.QRectF(10, 0, 160, 80))
     updateTime = ptime.time()
+    #----------------- btn clicked connet -----------------
     starbtn.clicked.connect(openradar)
     recordbtn.clicked.connect(StartRecord)
     stoprecordbtn.clicked.connect(StopRecord)
     savebtn.clicked.connect(SaveData)
     dcabtn.clicked.connect(ConnectDca)
     exitbtn.clicked.connect(app.instance().exit)
+    pd_btn.btn.clicked.connect(Run_PD)
+    # -----------------------------------------------------
     app.instance().exec_()
     set_radar.StopRadar()
     print('=======================================')
@@ -335,14 +369,14 @@ if __name__ == '__main__':
 
 
     lock = threading.Lock()
-    cam1 = CamCapture(1, 'First', 1, lock, CAMData, cam_rawData, mode=1,mp4_path="C:/Users//user/Desktop/2021-03-31/")
-    cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1,mp4_path="C:/Users//user/Desktop/2021-03-31/")
+    # cam1 = CamCapture(1, 'First', 1, lock, CAMData, cam_rawData, mode=1,mp4_path="C:/Users//user/Desktop/2021-03-31/")
+    # cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1,mp4_path="C:/Users//user/Desktop/2021-03-31/")
 
     collector = UdpListener('Listener', BinData, frame_length, address, buff_size, rawData)
     processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, 0, "0105", status=0)
 
-    cam1.start()
-    cam2.start()
+    # cam1.start()
+    # cam2.start()
     collector.start()
     processor.start()
     plotIMAGE = threading.Thread(target=plot())
@@ -352,8 +386,8 @@ if __name__ == '__main__':
     # sockConfig.close()
     collector.join(timeout=1)
     processor.join(timeout=1)
-    cam1.close()
-    cam2.close()
+    # cam1.close()
+    # cam2.close()
 
     print("Program Close")
     sys.exit()

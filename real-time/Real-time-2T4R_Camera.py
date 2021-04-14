@@ -21,7 +21,7 @@ from app_layout_2t4r import Ui_MainWindow
 # -----------------------------------------------
 # config = '../radar_config/IWR1843_cfg_2t4r_70MHz.cfg'
 config = '../radar_config/IWR1843_cfg_2t4r.cfg'
-set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM4', BaudRate=115200)
+set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM14', BaudRate=115200)
 
 
 def send_cmd(code):
@@ -93,6 +93,7 @@ def update_figure():
 
     if not RAIData.empty():
         xx = RAIData.get()[:, :, :].sum(0)
+        print(xx.shape)
         # img_rai.setImage((np.fliplr(np.flip(xx[36:-1,:], axis=0)).T))
 
         img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T)

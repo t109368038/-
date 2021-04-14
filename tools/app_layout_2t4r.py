@@ -11,7 +11,9 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QTextEdit
 from pyqtgraph import GraphicsLayoutWidget
-class btn_class(object):
+import pyqtgraph.opengl as gl
+
+class btn_class():
     def __init__(self, widget, obj_name, loc_x, loc_y, w, h):
         font = QtGui.QFont()
         font.setFamily("微軟正黑體 Light")
@@ -19,9 +21,11 @@ class btn_class(object):
         font.setItalic(False)
         font.setWeight(75)
         self.btn = QtWidgets.QPushButton(widget)
-        self.btn.setGeometry(QtCore.QRect(loc_x, loc_y, w,h ))
+        self.btn.setGeometry(QtCore.QRect(loc_x, loc_y, w , h ))
         self.btn.setFont(font)
         self.btn.setObjectName(obj_name)
+
+
 class Ui_MainWindow(object):
 
     def setupUi(self, MainWindow):
@@ -38,9 +42,11 @@ class Ui_MainWindow(object):
         self.graphicsView.setGeometry(QtCore.QRect(30, 60, 600, 600))
         self.graphicsView.setObjectName("graphicsView")
         self.graphicsView_2 = GraphicsLayoutWidget(self.centralwidget)
+        # self.graphicsView_2 = gl.GLViewWidget(self.centralwidget)
         self.graphicsView_2.setGeometry(QtCore.QRect(660, 60, 600, 600))
         self.graphicsView_2.setObjectName("graphicsView_2")
-        self.graphicsView_3 = GraphicsLayoutWidget(self.centralwidget)
+        # self.graphicsView_3 = GraphicsLayoutWidget(self.centralwidget)
+        self.graphicsView_3 = gl.GLViewWidget(self.centralwidget)
         self.graphicsView_3.setGeometry(QtCore.QRect(1290, 60, 600, 600))
         self.graphicsView_3.setObjectName("graphicsView_3")
         self.label = QtWidgets.QLabel(self.centralwidget)

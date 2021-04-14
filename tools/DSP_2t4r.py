@@ -1,6 +1,7 @@
 # version: 1.0
 
 import numpy as np
+import mmwave.dsp as dsp
 
 
 def Range_Doppler(data, mode=0, padding_size=None, windowing=True):
@@ -33,6 +34,8 @@ def Range_Doppler(data, mode=0, padding_size=None, windowing=True):
     # Range doppler processing
     if mode == 0:
         rdi_raw = np.fft.fft2(data, s=padding_size, axes=[0, 1])
+
+
         return rdi_raw
 
     elif mode == 1:
@@ -44,6 +47,7 @@ def Range_Doppler(data, mode=0, padding_size=None, windowing=True):
     elif mode == 2:
         rdi_raw = np.fft.fft2(data, s=padding_size, axes=[0, 1])
         rdi_abs = np.transpose(np.fft.fftshift(np.abs(rdi_raw), axes=0), [1, 0, 2])
+        # rdi_abs = np.transpose((np.abs(rdi_raw), [1, 0, 2])
         rdi_abs = np.flip(rdi_abs, axis=0)
         return [rdi_raw, rdi_abs]
 

@@ -236,6 +236,8 @@ def plot():
 
     starbtn.clicked.connect(openradar)
     exitbtn.clicked.connect(app.instance().exit)
+
+
     app.instance().exec_()
     tt.StopRadar()
 

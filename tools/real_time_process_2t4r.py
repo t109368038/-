@@ -128,18 +128,21 @@ class DataProcessor(th.Thread):
 
             rdi_raw, rdi = DSP_2t4r.Range_Doppler(data, mode=2, padding_size=[128, 64])
             # rai = DSP_2t4r.Range_Angle(data, mode=1, padding_size=[128, 64, 128])
-
             # ===============beamforming===============
-            # print(np.shape(rdi_raw))
-            # rdi_raw = rdi_raw.reshape([-1, 8])
-            # print(np.shape(rdi_raw))
-            # for i in range(8192):
-            #     self.out_matrix[i, :] = np.matmul(self.weight_matrix, rdi_raw[i, :])
-            # rai = self.out_matrix.reshape([128, 64, -1])
-            # rai = np.flip(np.abs(rai), axis=1)
-            # rai = np.flip(rai, axis=1)
-            # rai = np.abs(rai)
+            print(np.shape(rdi_raw))
+
+            rdi_raw = rdi_raw.reshape([-1, 8])
+            # print(np.shape(self.weight_matrix))
+            # print(np.shape(rdi_raw[0, :]))
+            for i in range(8192):
+                self.out_matrix[i, :] = np.matmul(self.weight_matrix, rdi_raw[i, :])
+            rai = self.out_matrix.reshape([128, 64, -1])
+            # print(np.shape(rai))
+
+            rai = np.flip(np.abs(rai), axis=1)
+            rai = np.flip(rai, axis=1)
+            rai = np.abs(rai)
             # ===============beamforming===============
             self.rdi_queue.put(rdi)
-            # self.rai_queue.put(rai)
+            self.rai_queue.put(rai)
 
