@@ -32,7 +32,7 @@ config = '../radar_config/xwr68xx_profile_2021_03_23T08_12_36_405.cfg'
 # config = '../radar_config/IWR1843_3d.cfg'
 # config = '../radar_config/xwr18xx_profile_2021_03_05T07_10_37_413.cfg'
 
-set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM13', BaudRate=115200)
+set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM22', BaudRate=115200)
 
 class Realtime_sys():
     def __init__(self):
@@ -206,11 +206,14 @@ class Realtime_sys():
 
     def SaveData(self):
         global savefilename, sockConfig, FPGA_address_cfg
-        set_radar.StopRadar()
+        # set_radar.StopRadar()
         np.save("D:/kaiku_report/20210414/pd.npy", self.pd_save)
         np.save("D:/kaiku_report/20210414/RDI.npy", self.rdi)
         np.save("D:/kaiku_report/20210414/RAI.npy", self.rai)
+        # QtCore.QTimer.singleShot(0, self.app.deleteLater)
 
+        # img_rdi.clear()
+        # img_cam.clear()
 
 
 
@@ -353,7 +356,7 @@ if __name__ == '__main__':
     # sockConfig = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     # sockConfig.bind(config_address)
 
-    opencamera = False
+    opencamera = True
 
     lock = threading.Lock()
     if opencamera:
