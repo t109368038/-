@@ -1,4 +1,4 @@
-from real-time-pd import UdpListener, DataProcessor
+from real_time_pd import UdpListener, DataProcessor
 from CameraCapture import CamCapture
 from scipy import signal
 from mpl_toolkits.mplot3d import Axes3D
@@ -23,8 +23,8 @@ import socket
 import cv2
 
 # -----------------------------------------------
-from app_layout_2t4r import Ui_MainWindow
-from R3t4r_to_point_cloud_for_realtime import plot_pd
+from pd_layout import Ui_MainWindow
+from plot_PointCloud import plot_pd
 # -----------------------------------------------
 # config = '../radar_config/IWR1843_cfg_3t4r_v3.4_1.cfg'
 config = '../radar_config/xwr68xx_profile_2021_03_23T08_12_36_405.cfg'
@@ -98,18 +98,20 @@ class Realtime_sys():
 
 
     def RDI_update(self):
-        global count, view_rai, p13d
+        global count, view_rai, p13d, power_text
+
         win_param = [8, 8, 3, 3]
         # cfar_rai = CA_CFAR(win_param, threshold=2.5, rd_size=[64, 181])
         if not RDIData.empty():
             rd = RDIData.get()
             img_rdi.setImage(np.rot90(rd, 1))
+            power_text.setText('Power:' + str(np.mean(rd)))
 
 
     def RAI_update(self):
         global count, view_rai, p13d
         if not RAIData.empty():
-            a= RAIData.get()
+            a = RAIData.get()
             img_rai.setImage(np.fliplr(np.flip(a, axis=0)).T)
 
 
@@ -218,7 +220,7 @@ class Realtime_sys():
 
 
     def plot(self):
-        global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename,view_rai,p13d,nice
+        global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename,view_rai,p13d,nice, power_text
         # ---------------------------------------------------
         self.app = QtWidgets.QApplication(sys.argv)
         MainWindow = QtWidgets.QMainWindow()
@@ -227,6 +229,7 @@ class Realtime_sys():
         # angCurve = pg.plot(tmp_data, pen='r')
         ui = Ui_MainWindow()
         ui.setupUi(MainWindow)
+        power_text = ui.label_4
 
         view_rdi = ui.graphicsView.addViewBox()
         view_rai = ui.graphicsView_2.addViewBox()
@@ -360,8 +363,8 @@ if __name__ == '__main__':
 
     lock = threading.Lock()
     if opencamera:
-        cam1 = CamCapture(1, 'First', 1, lock, CAMData, cam_rawData, mode=1,mp4_path="D:/kaiku_report/20210414/")
-        cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1,mp4_path="D:/kaiku_report/20210414/")
+        cam1 = CamCapture(1, 'First', 1, lock, CAMData, cam_rawData, mode=1)
+        cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1)
 
     collector = UdpListener('Listener', BinData, frame_length, address, buff_size, rawData)
     processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, pointcloud, 0, "0105", status=0)

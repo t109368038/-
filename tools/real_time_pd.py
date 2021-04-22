@@ -194,7 +194,8 @@ class DataProcessor(th.Thread):
                                                                   clutter_removal_enabled=True)
                 det_matrix_vis = np.fft.fftshift(det_matrix, axes=1)
 
-                self.rdi_queue.put(det_matrix_vis / det_matrix_vis.max())
+                # self.rdi_queue.put(det_matrix_vis / det_matrix_vis.max())
+                self.rdi_queue.put(det_matrix)
 
                 # (4) Object Detection
                 fft2d_sum = det_matrix.astype(np.int64)
@@ -317,7 +318,7 @@ class DataProcessor(th.Thread):
                 #     if cluster_np.size != 0:
                 #         if max(cluster_np) > max_size:
                 #             max_size = max(cluster_np)
-            elif mode ==3:
+            elif mode == 3:
                 range_resolution, bandwidth = mm.dsp.range_resolution(128)
                 doppler_resolution = mm.dsp.doppler_resolution(bandwidth, 60, 33.02, 9.43, 16, 3)
 
