@@ -1,5 +1,6 @@
 from real_time_pd import UdpListener, DataProcessor
-from CameraCapture import CamCapture
+# from CameraCapture import CamCapture
+from camera_capture_mp4 import CamCapture
 from scipy import signal
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
@@ -41,7 +42,7 @@ class Realtime_sys():
         self.rdi = []
         self.rai = []
 
-    def send_cmd(self,code):
+    def send_cmd(self, code):
         # command code list
         CODE_1 = (0x01).to_bytes(2, byteorder='little', signed=False)
         CODE_2 = (0x02).to_bytes(2, byteorder='little', signed=False)
@@ -121,9 +122,9 @@ class Realtime_sys():
         pos = pointcloud.get()
 
         # pos = np.delete(pos[:3], np.where((pos[:,3] >10) & (pos[:,3]<50))[0], axis=0)
-        pos = np.transpose(pos,[1,0])
+        pos = np.transpose(pos, [1, 0])
         # self.Run_PD(pos)
-        if self.pd_save_status == 1 :
+        if self.pd_save_status == 1:
             self.pd_save.append(pos)
             self.rdi = np.append(self.rdi, RDIData.get())
             self.rai = np.append(self.rai, RAIData.get())
@@ -363,8 +364,8 @@ if __name__ == '__main__':
 
     lock = threading.Lock()
     if opencamera:
-        cam1 = CamCapture(1, 'First', 1, lock, CAMData, cam_rawData, mode=1)
-        cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1)
+        cam1 = CamCapture(1, 'First', 1, lock, CAMData, cam_rawData, mode=1,mp4_path='C:/Users/lab210/Desktop/')
+        cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1,mp4_path='C:/Users/lab210/Desktop/')
 
     collector = UdpListener('Listener', BinData, frame_length, address, buff_size, rawData)
     processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, pointcloud, 0, "0105", status=0)
