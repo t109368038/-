@@ -1,4 +1,4 @@
-from offline_process_3t4r import run_proecss
+from offline_process_3t4r import DataProcessor
 from tkinter import filedialog
 import tkinter as tk
 import pyqtgraph as pg
@@ -11,6 +11,7 @@ import threading
 import sys
 import read_binfile
 import time
+from camera_offine import CamCapture
 # -----------------------------------------------
 from app_layout_2t4r_offline import Ui_MainWindow
 from R3t4r_to_point_cloud_for_realtime import plot_pd
@@ -25,12 +26,17 @@ class Realtime_sys():
         self.run_state  = False
         self.sure_next = True
         self.frame_count = 0
+        self.data_proecsss = DataProcessor()
 
     def start(self):
         self.run_state = True
         self.frame_count = 0
         self.stop_btn.setText("stop")
+        self.th_cam1 = CamCapture(self.file_path_cam1)
+        self.th_cam2 = CamCapture(self.file_path_cam2)
         self.update_figure()
+
+
     def stop(self):
         if self.run_state:
             self.stop_btn.setText("Continues")
@@ -58,9 +64,10 @@ class Realtime_sys():
 
     def update_figure(self):
         global count,view_rai,p13d
+        self.Sure_staic_RM = self.static_rm.isChecked()
         if self.run_state:
-            static_removal =self.enable_staic_clutter_removal.isChecked()
-            self.RDI ,self.RAI,self.PD = run_proecss(self.rawData[self.frame_count],static_removal)
+            self.RDI ,self.RAI,self.PD = self.data_proecsss.run_proecss(self.rawData[self.frame_count],\
+                                                            self.rai_mode,self.Sure_staic_RM,self.chirp)
             self.RDI_update()
             self.RAI_update()
             self.PD_update()
@@ -69,7 +76,8 @@ class Realtime_sys():
                 self.frame_count +=1
                 QtCore.QTimer.singleShot(1, self.update_figure)
                 QApplication.processEvents()
-
+            self.image_label1.setPixmap((self.th_cam1.get_frame()))
+            self.image_label2.setPixmap((self.th_cam2.get_frame()))
         else :
             pass
         print(self.frame_count)
@@ -87,13 +95,30 @@ class Realtime_sys():
             self.sure_next = False
             self.run_state = True
             self.update_figure()
+
     def SelectFolder(self):
         root = tk.Tk()
         root.withdraw()
-        self.file_path = filedialog.askopenfilename(parent=root, initialdir='D:\\Matt_yen_data\\NAS\\data\\bin file_processed\\new data(low powered)\\3t4r')
+        # self.file_path = filedialog.askopenfilename(parent=root, initialdir='D:\\Matt_yen_data\\NAS\\data\\bin file_processed\\new data(low powered)\\3t4r')
+        self.file_path = filedialog.askopenfilename(parent=root, initialdir='D:/kaiku_report/2021-0418for_posheng/')
         self.browse_text.setText(self.file_path)
-
         return self.file_path
+
+    def SelectFolder_cam1(self):
+        root = tk.Tk()
+        root.withdraw()
+        # self.file_path = filedialog.askopenfilename(parent=root, initialdir='D:\\Matt_yen_data\\NAS\\data\\bin file_processed\\new data(low powered)\\3t4r')
+        self.file_path_cam1 = filedialog.askopenfilename(parent=root, initialdir='D:/kaiku_report/2021-0418for_posheng/')
+        self.browse_text_cam1.setText(self.file_path_cam1)
+        return self.browse_text_cam1
+
+    def SelectFolder_cam2(self):
+        root = tk.Tk()
+        root.withdraw()
+        # self.file_path = filedialog.askopenfilename(parent=root, initialdir='D:\\Matt_yen_data\\NAS\\data\\bin file_processed\\new data(low powered)\\3t4r')
+        self.file_path_cam2 = filedialog.askopenfilename(parent=root, initialdir='D:/kaiku_report/2021-0418for_posheng/')
+        self.browse_text_cam2.setText(self.file_path_cam2)
+        return self.file_path_cam2
 
 
     def enable_btns(self,state):
@@ -102,11 +127,43 @@ class Realtime_sys():
         self.start_btn.setEnabled(state)
         self.stop_btn.setEnabled(state)
 
+    def slot(self, object):
+        print("Key was pressed, id is:", self.radio_group.id(object))
+        '''
+        raimode /0/1/2:
+                0 -> FFT-RAI
+                1 -> beamformaing RAI 
+                3 -> static clutter removal
+        '''
+        self.rai_mode = self.radio_group.id(object)
+        if self.rai_mode ==1:
+            self.view_rai.setRange(QtCore.QRectF(10, 0, 170, 80))
+        else:
+            self.view_rai.setRange(QtCore.QRectF(-5, 0, 100, 60))
+
     def load_file(self):
-        self.rawData =read_binfile.read_bin_file(self.file_path,[64,64,32,3,4],mode=0,header=False,packet_num=4322)
-        self.rawData = np.transpose(self.rawData,[0,1,3,2])
+        load_mode = 1
+        if load_mode == 0 :
+            self.rawData =read_binfile.read_bin_file(self.file_path,[64,64,32,3,4],mode=0,header=False,packet_num=4322)
+            self.rawData = np.transpose(self.rawData,[0,1,3,2])
+            self.chirp = 32
+        elif load_mode == 1:
+            data  =np.load(self.file_path,allow_pickle=True)
+            data = np.reshape(data, [-1, 4])
+            data = data[:, 0:2:] + 1j * data[:, 2::]
+            self.rawData = np.reshape(data,[-1,48,4,64])
+            self.chirp = 16
+
+
+
         print(np.shape(self.rawData))
+        # print(self.browse_text_cam1.text)
+        # if self.browse_text_cam1 != None
+        # self.th_cam1 = CamCapture()
+        # self.th_cam1 = CamCapture()
+
         self.enable_btns(True)
+
 
     def plot(self):
         global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename,view_rai,p13d,nice
@@ -119,29 +176,39 @@ class Realtime_sys():
 
         self.browse_btn = ui.browse_btn
         self.browse_text = ui.textEdit
+        self.browse_text_cam1 = ui.textEdit_cam1
+        self.browse_text_cam2 = ui.textEdit_cam2
         self.load_btn = ui.load_btn
         self.start_btn = ui.start_btn
         self.stop_btn  =ui.stop_btn
         self.next_btn  =ui.next_btn
         self.pre_btn = ui.pre_btn
-        self.enable_staic_clutter_removal = ui.checkBox1
+        self.radio_group =  ui.radio_btn_group
+        self.static_rm = ui.sure_static
+        self.cam1 = ui.label_cam1
+        self.cam2 = ui.label_cam2
+        self.cam1_btn =  ui.browse_cam1_btn
+        self.cam2_btn =  ui.browse_cam2_btn
+        self.image_label1 =ui.image_label1
+        self.image_label2 =ui.image_label2
         # #----------------- btn clicked connet -----------------
         self.browse_btn.clicked.connect(self.SelectFolder)
+        self.cam1_btn.clicked.connect(self.SelectFolder_cam1)
+        self.cam2_btn.clicked.connect(self.SelectFolder_cam2)
         self.load_btn.clicked.connect(self.load_file)
         self.start_btn.clicked.connect(self.start)
         self.next_btn.clicked.connect(self.next_frame)
         self.pre_btn.clicked.connect(self.pre_frame)
         self.stop_btn.clicked.connect(self.stop)
-
-        self.enable_btns(False)
+        self.radio_group.buttonClicked.connect(self.slot)
         # # -----------------------------------------------------
-        view_rdi = ui.graphicsView.addViewBox()
-        view_rai = ui.graphicsView_2.addViewBox()
+        self.view_rdi = ui.graphicsView.addViewBox()
+        self.view_rai = ui.graphicsView_2.addViewBox()
         view_PD = ui.graphicsView_3
         # ---------------------------------------------------
         # lock the aspect ratio so pixels are always square
-        view_rdi.setAspectLocked(True)
-        view_rai.setAspectLocked(True)
+        self.view_rdi.setAspectLocked(True)
+        self.view_rai.setAspectLocked(True)
         img_rdi = pg.ImageItem(border='w')
         img_rai = pg.ImageItem(border='w')
         img_cam = pg.ImageItem(border='w')
@@ -166,6 +233,7 @@ class Realtime_sys():
         view_PD.addItem(p13d)
         view_PD.addItem(coord)
         view_PD.addItem(origin)
+        self.enable_btns(False)
 
         # ang_cuv = pg.PlotDataItem(tmp_data, pen='r')
         # Colormap
@@ -199,10 +267,10 @@ class Realtime_sys():
         lookup_table = color_map.getLookupTable(0.0, 1.0, 256)
         img_rdi.setLookupTable(lookup_table)
         img_rai.setLookupTable(lookup_table)
-        view_rdi.addItem(img_rdi)
-        view_rai.addItem(img_rai)
-        view_rdi.setRange(QtCore.QRectF(-5, 0, 140, 80))
-        view_rai.setRange(QtCore.QRectF(10, 0, 160, 80))
+        self.view_rdi.addItem(img_rdi)
+        self.view_rai.addItem(img_rai)
+        self.view_rdi.setRange(QtCore.QRectF(0, 0, 30, 70))
+        self.view_rai.setRange(QtCore.QRectF(10, 0, 160, 80))
         updateTime = ptime.time()
         self.app.instance().exec_()
         # print('=======================================')

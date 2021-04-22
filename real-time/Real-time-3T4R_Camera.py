@@ -250,7 +250,7 @@ def plot():
     view_rdi = ui.graphicsView.addViewBox()
     # view_rai = ui.graphicsView_2.addViewBox()
     view_rai = ui.graphicsView_2
-    view_cam = ui.graphicsView_3.addViewBox()
+    # view_cam = ui.graphicsView_3.addViewBox()
     xgrid = gl.GLGridItem()
     ygrid = gl.GLGridItem()
     zgrid = gl.GLGridItem()
@@ -279,7 +279,7 @@ def plot():
     # lock the aspect ratio so pixels are always square
     view_rdi.setAspectLocked(True)
     # view_rai.setAspectLocked(True)
-    view_cam.setAspectLocked(True)
+    # view_cam.setAspectLocked(True)
     img_rdi = pg.ImageItem(border='w')
     img_rai = pg.ImageItem(border='w')
     img_cam = pg.ImageItem(border='w')
@@ -316,7 +316,7 @@ def plot():
     img_rai.setLookupTable(lookup_table)
     view_rdi.addItem(img_rdi)
     # view_rai.addItem(img_rai)
-    view_cam.addItem(img_cam)
+    # view_cam.addItem(img_cam)
     # view_angCurve.addItem(ang_cuv)
 
     # Set initial view bounds

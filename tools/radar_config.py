@@ -3,7 +3,6 @@
 import serial
 import time
 
-
 # Radar EVM setting
 class SerialConfig():
     def __init__(self, name, CLIPort, BaudRate):

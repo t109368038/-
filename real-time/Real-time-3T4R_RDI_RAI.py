@@ -32,7 +32,9 @@ config = '../radar_config/xwr68xx_profile_2021_03_23T08_12_36_405.cfg'
 # config = '../radar_config/IWR1843_3d.cfg'
 # config = '../radar_config/xwr18xx_profile_2021_03_05T07_10_37_413.cfg'
 
-set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM22', BaudRate=115200)
+set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM13', BaudRate=115200)
+# set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM3', BaudRate=115200)
+# set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM21', BaudRate=115200)
 
 class Realtime_sys():
     def __init__(self):
@@ -40,6 +42,7 @@ class Realtime_sys():
         self.pd_save = []
         self.rdi = []
         self.rai = []
+        self.data = []
 
     def send_cmd(self,code):
         # command code list
@@ -125,7 +128,7 @@ class Realtime_sys():
             self.pd_save.append(pos)
             self.rdi = np.append(self.rdi, RDIData.get())
             self.rai = np.append(self.rai, RAIData.get())
-
+            self.data.append(rawData.get())
         p13d.setData(pos=pos[:,:3],color= [1,0.35,0.02,1],pxMode= True)
 
 
@@ -139,7 +142,7 @@ class Realtime_sys():
         QtCore.QTimer.singleShot(1, self.RAI_update)
         QtCore.QTimer.singleShot(1, self.PD_update)
         QtCore.QTimer.singleShot(1, self.update_figure)
-        QApplication.processEvents()
+        # QApplication.processEvents()
         # QtCore.QTimer.singleShot(1, Run_PD())
         now = ptime.time()
         updateTime = now
@@ -155,7 +158,6 @@ class Realtime_sys():
         set_radar.SendConfig(config)
         print('======================================')
         self.update_figure()
-
     def StartRecord(self):
         # processor.status = 1
         collector.status = 1
@@ -197,7 +199,8 @@ class Realtime_sys():
     def SelectFolder(self):
         root = tk.Tk()
         root.withdraw()
-        file_path = filedialog.asksaveasfilename(parent=root, initialdir='E:')
+        file_path = filedialog.asksaveasfilename(parent=root, initialdir='D:/kaiku_report/2021-0418for_posheng')
+        self.path = file_path
         return file_path
 
     def Run_PD(self,data):
@@ -206,10 +209,13 @@ class Realtime_sys():
 
     def SaveData(self):
         global savefilename, sockConfig, FPGA_address_cfg
-        # set_radar.StopRadar()
-        np.save("D:/kaiku_report/20210414/pd.npy", self.pd_save)
-        np.save("D:/kaiku_report/20210414/RDI.npy", self.rdi)
-        np.save("D:/kaiku_report/20210414/RAI.npy", self.rai)
+        # set_radar.StopRadar(
+        path = self.SelectFolder()
+
+        # np.save(self.path+"pd.npy", self.pd_save)
+        np.save(self.path+"RDI.npy", self.rdi)
+        # np.save(self.path+"RAI.npy", self.rai)
+        np.save(self.path+"data.npy", self.data)
         # QtCore.QTimer.singleShot(0, self.app.deleteLater)
 
         # img_rdi.clear()
@@ -317,7 +323,7 @@ class Realtime_sys():
         savebtn.clicked.connect(self.SaveData)
         dcabtn.clicked.connect(self.ConnectDca)
         exitbtn.clicked.connect(self.app.instance().exit)
-        pd_btn.btn.clicked.connect(self.Run_PD)
+        # pd_btn.btn.clicked.connect(self.Run_PD)
         # -----------------------------------------------------
         self.app.instance().exec_()
         set_radar.StopRadar()
@@ -358,11 +364,10 @@ if __name__ == '__main__':
 
     opencamera = True
 
-    lock = threading.Lock()
+    # lock = threading.Lock()
     if opencamera:
-        cam1 = CamCapture(1, 'First', 1, lock, CAMData, cam_rawData, mode=1,mp4_path="D:/kaiku_report/20210414/")
-        cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1,mp4_path="D:/kaiku_report/20210414/")
-
+        cam1 = CamCapture(1, 'First', 1, "lock", CAMData, cam_rawData, mode=1,mp4_path="D:/kaiku_report/2021-0418for_posheng/")
+        cam2 = CamCapture(0, 'Second', 0, "lock", CAMData2, cam_rawData2, mode=1,mp4_path="D:/kaiku_report/2021-0418for_posheng/")
     collector = UdpListener('Listener', BinData, frame_length, address, buff_size, rawData)
     processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, pointcloud, 0, "0105", status=0)
     if opencamera:
@@ -375,6 +380,8 @@ if __name__ == '__main__':
 
     # sockConfig.sendto(send_cmd('6'), FPGA_address_cfg)
     # sockConfig.close()
+    cam1.join(timeout=1)
+    cam2.join(timeout=1)
     collector.join(timeout=1)
     processor.join(timeout=1)
     if opencamera:

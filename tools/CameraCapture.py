@@ -58,10 +58,12 @@ class CamCapture(th.Thread):
             # no mediapipe
             # cv2.namedWindow(self.name)
             self.cam = cv2.VideoCapture(self.counter)
-            sz = (int(self.cam.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.cam.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-            self.fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            self.vout = cv2.VideoWriter()
-            self.vout.open(self.save_mp4_path + 'output'+str(self.counter)+'.mp4', self.fourcc, 20, sz, True)
+
+            ##-------------------------
+            # sz = (int(self.cam.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.cam.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+            # self.fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            # self.vout = cv2.VideoWriter()
+            # self.vout.open(self.save_mp4_path + 'output'+str(self.counter)+'.mp4', self.fourcc, 20, sz, True)
 
             self.cam.set(cv2.CAP_PROP_FPS, 20)
             fps = int(self.cam.get(5))
@@ -85,9 +87,10 @@ class CamCapture(th.Thread):
                 tmp_frame = cv2.cvtColor(tmp_frame, cv2.COLOR_BGR2RGB)
                 if self.status == 1:
                     # print(self.status)
-                    self.save_queue.put(tmp_frame)
-                    self.cam_queue.put(tmp_frame)
-                    self.vout.write(frame)
+                    # self.save_queue.put(tmp_frame)
+                    # self.cam_queue.put(tmp_frame)
+                    # self.vout.write(frame)
+                    pass
                 # self.cam_queue.put(tmp_frame)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
@@ -100,8 +103,8 @@ class CamCapture(th.Thread):
 
     def close(self):
         self.cam.release()
-        self.vout.release()
-
+        # self.vout.release()
+#
 # lock = th.Lock()
 # cam1 = CamCapture(0, 'First', 0, lock, status=0, mode=1)
 # cam2 = CamCapture(1, 'Second', 1, lock, status=0, mode=1)
