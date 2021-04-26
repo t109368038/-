@@ -38,10 +38,10 @@ hands = mp_hands.Hands(
 # data_path = 'C:/Users/user/Desktop/2021-0317/'
 # data_path = 'C:/Users/user/Desktop/2021-03-31'
 # data_path = 'D:/kaiku_report/20210414'
-data_path = 'E:/NTUT-master/KaiKu Report/0422/finger_move'
+data_path = 'E:/NTUT-master/KaiKu Report/0426/'
 
-videoCapture = cv2.VideoCapture(data_path+"/output0.mp4")
-videoCapture1 = cv2.VideoCapture(data_path+"/output1.mp4")
+videoCapture = cv2.VideoCapture(data_path+"output0.mp4")
+videoCapture1 = cv2.VideoCapture(data_path+"output1.mp4")
 
 fps = videoCapture.get(cv2.CAP_PROP_FPS)
 size = (int(videoCapture.get(cv2.CAP_PROP_FRAME_WIDTH)),
@@ -65,7 +65,7 @@ y=[]
 z=[]
 loose_time = 0
 is_pass = False
-only_one = 0
+only_one = 1
 frame_lose = 0
 frame1_lose = 0
 text = None
@@ -79,9 +79,14 @@ sz = (int(videoCapture.get(cv2.CAP_PROP_FRAME_WIDTH)), int(videoCapture.get(cv2.
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 vout = cv2.VideoWriter()
 vout.open(data_path + '/video'+str(only_one)+ '.mp4',fourcc, 20, sz, True)
+
+
+frames_num=videoCapture.get(7)
+print(frames_num)
+count = 0
 #------------------------------------------
 while success:
-
+    count += 1
     frame.flags.writeable = False
     frame1.flags.writeable = False
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -123,6 +128,7 @@ while success:
                     frame1, hand_landmarks, mp_hands.HAND_CONNECTIONS)
             cam1_hp = cam1_hp + [x2, y2]
         else:
+            cam1_hp = cam1_hp + [[np.zeros(21)], np.zeros[21]]
             frame1_lose +=1
             text1 = "the frame lose_times: " + str(frame1_lose)
         # if text1 != None:
