@@ -74,7 +74,7 @@ def plot_hand_cm(ax,elev,azim,x1,x2,y2,px,py,pz,mode,file_mode):
 
 if __name__ == '__main__':
 
-    PDdata = np.load("D:/kaiku_report/20210414/pd.npy",allow_pickle=True)
+    PDdata = np.load("D:/kaiku_report/20210414/pd.npy", allow_pickle=True)
     data_path = 'D:/kaiku_report/20210414/'
     cam_hp = np.load(data_path + "cam_hp.npy", allow_pickle=True)
     cam1_hp = np.load(data_path + "cam_hp1.npy", allow_pickle=True)
