@@ -118,9 +118,10 @@ makeMovieTitle = " "
 visTrigger = plot2DscatterXY + plot2DscatterXZ + plot3Dscatter + plotRangeDopp + plotCustomPlt
 
 # data_path = 'E:/ResearchData/ThuMouseData/DATA0331/'
-data_path = 'E:/ResearchData/ThuMouseData/'
+data_path = 'E:/NTUT-master/KaiKu Report/0422/finger_move/'
 # file_name = '0316_hand_rawdata.npy'
-file_name = 'hand_up_down_rawdata.npy'
+# file_name = 'hand_up_down_rawdata.npy'
+file_name = 'fingermovedata.npy'
 # file_name = 'thumouse_rawdata.npy'
 
 data = np.load(data_path + file_name)
@@ -383,7 +384,7 @@ for i, frame in enumerate(radarcube):
             sys.exit("Unknown plot options.")
 
         import os
-        save_path = 'E:/ResearchData/ThuMouseData/RESULT0331/thumouse/test/'
+        save_path = 'E:/NTUT-master/KaiKu Report/0422/finger_move/'
         if not os.path.isdir(save_path):
             os.makedirs(save_path)
 
