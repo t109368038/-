@@ -64,10 +64,20 @@ class Visualizer(object):
 if __name__ == '__main__':
     path = 'E:/NTUT-master/KaiKu Report/0426/'
     radar_file = 'fingermovepd.npy'
-    radar_pd = np.load(path + radar_file, allow_pickle=True)
-    radar_pos = queue.Queue()
-    for j, pos in enumerate(radar_pd):
-        radar_pos.put(pos)
+    hand_file_1 = 'cam_hp.npy'
+    hand_file_2 = 'cam_hp1.npy'
 
-    v = Visualizer(radar_pos)
-    v.animation()
+    radar_pd = np.load(path + radar_file, allow_pickle=True)
+    hand_pd_1 = np.load(path + hand_file_1, allow_pickle=True)
+    hand_pd_2 = np.load(path + hand_file_1, allow_pickle=True)
+
+    for h in range(int(hand_pd_1.shape[0] / 2)):
+
+
+
+    # radar_pos = queue.Queue()
+    # for j, pos in enumerate(radar_pd):
+    #     radar_pos.put(pos)
+    #
+    # v = Visualizer(radar_pos)
+    # v.animation()
