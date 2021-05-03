@@ -132,8 +132,8 @@ def openradar():
 def StartRecord():
     # processor.status = 1
     collector.status = 1
-    cam1.status = 1
-    cam2.status = 1
+    # cam1.status = 1
+    # cam2.status = 1
     print('Start Record Time:', (time.ctime(time.time())))
     print('=======================================')
 
@@ -141,8 +141,8 @@ def StartRecord():
 def StopRecord():
     # processor.status = 0
     collector.status = 0
-    cam1.status = 0
-    cam2.status = 0
+    # cam1.status = 0
+    # cam2.status = 0
     print('Stop Record Time:', (time.ctime(time.time())))
     print('=======================================')
 
@@ -183,8 +183,8 @@ def SaveData():
         # name = savefilename.toPlainText()
         print('=======================================')
         print('File Save Radar:', path + '_rawdata')
-        print('File Same Cam1:', path + '_cam1')
-        print('File Same Cam2:', path + '_cam2')
+        # print('File Same Cam1:', path + '_cam1')
+        # print('File Same Cam2:', path + '_cam2')
         print('=======================================')
         data_save = []
         while not rawData.empty():
@@ -193,20 +193,20 @@ def SaveData():
         np.save(path + '_rawdata', data_save)
         print('Radar File Size', np.shape(data_save)[0])
         print('=======================================')
-        cam_save = []
-        while not cam_rawData.empty():
-            tmp = cam_rawData.get()
-            cam_save.append(tmp)
-        np.save(path + '_cam1', cam_save)
-        print('Camera 1 File Size:', np.shape(cam_save)[0])
-        print('=======================================')
-        cam_save2 = []
-        while not cam_rawData2.empty():
-            tmp = cam_rawData2.get()
-            cam_save2.append(tmp)
-        np.save(path  + '_cam2', cam_save2)
-        print('Camera 2 File Size:', np.shape(cam_save2)[0])
-        print('=======================================')
+        # cam_save = []
+        # while not cam_rawData.empty():
+        #     tmp = cam_rawData.get()
+        #     cam_save.append(tmp)
+        # np.save(path + '_cam1', cam_save)
+        # print('Camera 1 File Size:', np.shape(cam_save)[0])
+        # print('=======================================')
+        # cam_save2 = []
+        # while not cam_rawData2.empty():
+        #     tmp = cam_rawData2.get()
+        #     cam_save2.append(tmp)
+        # np.save(path  + '_cam2', cam_save2)
+        # print('Camera 2 File Size:', np.shape(cam_save2)[0])
+        # print('=======================================')
         print('Save File Done')
         print('=======================================')
 
@@ -335,13 +335,13 @@ if __name__ == '__main__':
 
     lock = threading.Lock()
     # cam1 = CamCapture(1, 'First', 1, lock, CAMData, cam_rawData, mode=1)
-    cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1)
+    # cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1)
 
     collector = UdpListener('Listener', BinData, frame_length, address, buff_size, rawData)
     processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, 0, "0105", status=0)
 
     # cam1.start()
-    cam2.start()
+    # cam2.start()
     collector.start()
     processor.start()
     plotIMAGE = threading.Thread(target=plot())
@@ -352,7 +352,7 @@ if __name__ == '__main__':
     collector.join(timeout=1)
     processor.join(timeout=1)
     # cam1.close()
-    cam2.close()
+    # cam2.close()
 
     print("Program Close")
     sys.exit()

@@ -158,10 +158,10 @@ def GetGroundTruth(x1, y1, x2, y2):
 
 # Start Qt event loop unless running in interactive mode.
 if __name__ == '__main__':
-    path = 'E:/NTUT-master/KaiKu Report/0426/write8/'
+    path = 'E:/NTUT-master/KaiKu Report/0426/azi/'
     # path = 'E:/NTUT-master/KaiKu Report/0426/elv/'
     # path = 'E:/NTUT-master/KaiKu Report/0426/range/'
-    radar_file = 'rm_pd.npy'
+    radar_file = 'no_rm_pd.npy'
     hand_file_1 = 'cam_hp.npy'
     hand_file_2 = 'cam_hp1.npy'
 
