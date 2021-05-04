@@ -11,6 +11,7 @@ from tensorflow import keras
 from tensorflow.keras.layers import Conv2D, BatchNormalization, Dropout, \
     Flatten, Dense, LSTM, TimeDistributed, Bidirectional, Activation
 from sklearn.metrics import confusion_matrix
+import tensorflow as tf
 
 
 def read_dataset(data_path, sense, gesture, data_type, times, frame_num):
@@ -19,7 +20,7 @@ def read_dataset(data_path, sense, gesture, data_type, times, frame_num):
     print('Sense:', sense)
     print('==============================')
     for g in range(gesture):
-        filename = data_type + '_S' + str(sense) + 'G' + str(g) + '.npy'
+        filename = 'S' + str(sense) + 'G' + str(g) + '.npy'
         print('Read File:' + filename)
         data_tmp = np.load(data_path + filename)
         data.extend(data_tmp)
@@ -67,9 +68,10 @@ def plot_confusion_matrix(cm_std, classes, save_file=False):
         plt.savefig()
 
 
-data_path = '../data/Studio_data/2t4r_v132/'
+
+data_path = 'C:/data2/padding_h5_2t4r/RAI_rotate/'
 epochs = 40
-sense = [0, 1]
+sense = [0]
 gesture = 12
 times = 10
 frame_num = 64
@@ -86,38 +88,41 @@ print('==============================')
 
 data_s0, label_s0 = read_dataset(data_path, sense[0], gesture, dataset_type, times, frame_num)
 data_s0 = np.array(data_s0)
-data_s1, label_s1 = read_dataset(data_path, sense[1], gesture, dataset_type, times, frame_num)
-data_s1 = np.array(data_s1)
+# data_s1, label_s1 = read_dataset(data_path, sense[1], gesture, dataset_type, times, frame_num)
+# data_s1 = np.array(data_s1)
 
 # x_train, x_test, y_train, y_test = train_test_split(data_s0, label_s0, test_size=0.2, random_state=2)
-data_s0, data_s1, label_s0, label_s1 = shuffle(data_s0, data_s1, label_s0, label_s1, random_state=2)
+# data_s0, data_s1, label_s0, label_s1 = shuffle(data_s0, data_s1, label_s0, label_s1, random_state=2)
 # for cross sense
-x_train_s0, x_test_s0, y_train_s0, y_test_s0 = train_test_split(data_s0, label_s0, test_size=0.8, random_state=2)
-x_train_s1, x_test_s1, y_train_s1, y_test_s1 = train_test_split(data_s1, label_s1, test_size=0.2, random_state=2)
+x_train_s0, x_test_s0, y_train_s0, y_test_s0 = train_test_split(data_s0, label_s0, test_size=0.2, random_state=2)
+# x_train_s1, x_test_s1, y_train_s1, y_test_s1 = train_test_split(data_s1, label_s1, test_size=0.2, random_state=2)
 
-x_train = np.concatenate([x_train_s0, x_train_s1], axis=0)
-y_train = np.concatenate([y_train_s0, y_train_s1], axis=0)
-x_test = np.concatenate([x_test_s0, x_test_s1], axis=0)
-y_test = np.concatenate([y_test_s0, y_test_s1], axis=0)
+# x_train = np.concatenate([x_train_s0, x_train_s1], axis=0)
+# y_train = np.concatenate([y_train_s0, y_train_s1], axis=0)
+# x_test = np.concatenate([x_test_s0, x_test_s1], axis=0)
+# y_test = np.concatenate([y_test_s0, y_test_s1], axis=0)
 
 # x_train = data_s0
 # y_train = label_s0
 # x_test = data_s1
 # y_test = label_s1
 
-print("Training Data Shape：", np.shape(x_train))
-print("Testing Data Shape：", np.shape(x_test))
-print("Training Label Shape：", np.shape(y_train))
-print("Testing Label Shape：", np.shape(y_test))
+x_train_s0 = x_train_s0.transpose([0, 1, 3, 4, 2])
+x_test_s0 = x_test_s0.transpose([0, 1, 3, 4, 2])
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+print("Training Data Shape：", np.shape(x_train_s0))
+print("Testing Data Shape：", np.shape(x_test_s0))
+print("Training Label Shape：", np.shape(y_train_s0))
+print("Testing Label Shape：", np.shape(y_test_s0))
+
+
 
 scheduler = keras.callbacks.LearningRateScheduler(lr_scheduler)
 
 # model ==============================
 model = Sequential()
 
-model.add(TimeDistributed(Conv2D(32, (3, 3), strides=1, padding='valid'), input_shape=x_train.shape[1:]))
+model.add(TimeDistributed(Conv2D(32, (3, 3), strides=1, padding='valid'), input_shape=x_train_s0.shape[1:]))
 # model.add(TimeDistributed(MaxPooling2D((3, 3), strides=1, padding='valid', data_format='channels_last')))
 model.add(TimeDistributed(BatchNormalization()))
 model.add(TimeDistributed(Activation('relu')))
@@ -158,18 +163,19 @@ model.compile(optimizer=sgd,
               loss='categorical_crossentropy',
               metrics=['accuracy'])
 model.summary()
+
 # model ==============================
-history = model.fit(x_train, y_train,
+history = model.fit(x_train_s0, y_train_s0,
                     batch_size=batch_sizes, epochs=epochs, shuffle=False, verbose=1,
                     callbacks=[scheduler],
-                    validation_data=(x_test, y_test)
+                    validation_data=(x_test_s0, y_test_s0)
                     )
 print("Training Finished, Let's look the prediction results")
-prediction = model.predict(x_test)
+prediction = model.predict(x_test_s0)
 prediction = np.reshape(prediction, [-1, gesture])
 prediction_cat = np.argmax(prediction, axis=1)
 
-y_test = np.reshape(y_test, [-1, gesture])
+y_test = np.reshape(y_test_s0, [-1, gesture])
 y_cat = np.argmax(y_test, axis=1)
 
 print("Plot Confusion Matrix")
