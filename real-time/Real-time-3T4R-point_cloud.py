@@ -1,9 +1,9 @@
-from real_time_process_3t4r import UdpListener, DataProcessor
-#from CameraCapture import CamCapture
+from real_time_pd import UdpListener, DataProcessor
+# from CameraCapture import CamCapture
+from camera_capture_mp4 import CamCapture
 from scipy import signal
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
-
 from radar_config import SerialConfig
 from queue import Queue
 from tkinter import filedialog
@@ -24,19 +24,17 @@ import socket
 import cv2
 
 # -----------------------------------------------
-from app_layout_2t4r import Ui_MainWindow
+from pd_layout import Ui_MainWindow
 from R3t4r_to_point_cloud_for_realtime import plot_pd
-# from caclulate_mediapipe import deal_imag
 # -----------------------------------------------
 # config = '../radar_config/IWR1843_cfg_3t4r_v3.4_1.cfg'
-config = '../radar_config/xwr68xx_profile_2021_03_23T08_12_36_405.cfg'
+# config = '../radar_config/xwr68xx_profile_2021_03_23T08_12_36_405.cfg'
+config = '../radar_config/xwr68xx_profile_2021_03_23T08_12_36_405_larrytest.cfg'
 # config = '../radar_config/xwr18xx_profile_2021_03_09T10_45_11_974.cfg'
 # config = '../radar_config/IWR1843_3d.cfg'
 # config = '../radar_config/xwr18xx_profile_2021_03_05T07_10_37_413.cfg'
 
 set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM5', BaudRate=115200)
-# set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM3', BaudRate=115200)
-# set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM21', BaudRate=115200)
 
 class Realtime_sys():
     def __init__(self):
@@ -44,10 +42,8 @@ class Realtime_sys():
         self.pd_save = []
         self.rdi = []
         self.rai = []
-        self.data = []
-        self.count=0
 
-    def send_cmd(self,code):
+    def send_cmd(self, code):
         # command code list
         CODE_1 = (0x01).to_bytes(2, byteorder='little', signed=False)
         CODE_2 = (0x02).to_bytes(2, byteorder='little', signed=False)
@@ -104,43 +100,45 @@ class Realtime_sys():
 
 
     def RDI_update(self):
-        global count, view_rai, p13d
-        win_param = [8, 8, 3, 3]
-        # cfar_rai = CA_CFAR(win_param, threshold=2.5, rd_size=[64, 181])
-        if not RDIData.empty():
-            self.rd = RDIData.get()
-            img_rdi.setImage(np.rot90(self.rd[:,:], 1),)
+        global count, view_rai, p13d, power_text
 
+        win_param = [8, 8, 3, 3]
+
+
+        if not RDIData.empty():
+            rd = RDIData.get()
+            # img_rdi.setImage(np.rot90(rd, 1))
+            #------no static remove------
+            # img_rdi.setImage(np.rot90(rd, 1), levels=[150, 250])
+            # ------ static remove------
+            img_rdi.setImage(np.rot90(rd, 1), levels=[40, 150])
+            power_text.setText('Power:' + str(np.mean(rd)))
 
     def RAI_update(self):
         global count, view_rai, p13d
         if not RAIData.empty():
-            a= RAIData.get()
-            img_rai.setImage(np.fliplr(np.flip(a, axis=0)).T)
+            a = RAIData.get()
+            # img_rai.setImage(np.fliplr(np.flip(a, axis=0)).T)
+            # ------no static remove------
+            # img_rai.setImage(np.fliplr(np.flip(a, axis=0)).T, levels=[20e4, 50.0e4])
+            # ------ static remove ------
+            img_rai.setImage(np.fliplr(np.flip(a, axis=0)).T, levels=[0.5e4, 9.0e4])
+
 
     def PD_update(self):
         global count, view_rai, p13d,nice,ax
         # --------------- plot 3d ---------------
-        # image_pro.process(cam1.get_frame(),cam2.get_frame(),'aaa')
-
         pos = pointcloud.get()
+
         # pos = np.delete(pos[:3], np.where((pos[:,3] >10) & (pos[:,3]<50))[0], axis=0)
-        pos = np.transpose(pos,[1,0])
+        pos = np.transpose(pos, [1, 0])
         # self.Run_PD(pos)
-        if self.pd_save_status == 1 :
-            if self.count != 20 :
-                self.count += 1
-                # self.pd_save.append(pos)
-                self.rdi.append(self.rd)
-                # self.rai = np.append(self.rai, RAIData.get())
-                self.data.append(rawData.get())
-            else:
-                self.count = 0
-                self.pd_save_status = 0
+        if self.pd_save_status == 1:
+            self.pd_save.append(pos)
+            self.rdi = np.append(self.rdi, RDIData.get())
+            self.rai = np.append(self.rai, RAIData.get())
+
         p13d.setData(pos=pos[:,:3],color= [1,0.35,0.02,1],pxMode= True)
-
-
-
 
 
     def update_figure(self):
@@ -150,7 +148,7 @@ class Realtime_sys():
         QtCore.QTimer.singleShot(1, self.RAI_update)
         QtCore.QTimer.singleShot(1, self.PD_update)
         QtCore.QTimer.singleShot(1, self.update_figure)
-        # QApplication.processEvents()
+        QApplication.processEvents()
         # QtCore.QTimer.singleShot(1, Run_PD())
         now = ptime.time()
         updateTime = now
@@ -166,11 +164,12 @@ class Realtime_sys():
         set_radar.SendConfig(config)
         print('======================================')
         self.update_figure()
+
     def StartRecord(self):
         # processor.status = 1
         collector.status = 1
-        # cam1.status = 1
-        # cam2.status = 1
+        cam1.status = 1
+        cam2.status = 1
         self.pd_save_status = 1
         print('Start Record Time:', (time.ctime(time.time())))
         print('=======================================')
@@ -179,8 +178,8 @@ class Realtime_sys():
     def StopRecord(self):
         # processor.status = 0
         collector.status = 0
-        # cam1.status = 0
-        # cam2.status = 0
+        cam1.status = 0
+        cam2.status = 0
         self.pd_save_status=0
         print('Stop Record Time:', (time.ctime(time.time())))
         print('=======================================')
@@ -203,12 +202,10 @@ class Realtime_sys():
             msg, server = sockConfig.recvfrom(2048)
             # print('receive command:', msg.hex())
 
-
     def SelectFolder(self):
         root = tk.Tk()
         root.withdraw()
-        file_path = filedialog.asksaveasfilename(parent=root, initialdir='D:/kaiku_report/20210429/')
-        self.path = file_path
+        file_path = filedialog.asksaveasfilename(parent=root, initialdir='E:')
         return file_path
 
     def Run_PD(self,data):
@@ -217,34 +214,27 @@ class Realtime_sys():
 
     def SaveData(self):
         global savefilename, sockConfig, FPGA_address_cfg
-        # set_radar.StopRadar(
-        path = self.SelectFolder()
-
-        # np.save(self.path+"pd.npy", self.pd_save)
-        np.save(self.path+"RDI.npy", self.rdi)
-        # np.save(self.path+"RAI.npy", self.rai)
-        # np.save(self.path+"data.npy", self.data)
-        # QtCore.QTimer.singleShot(0, self.app.deleteLater)
-
-        # img_rdi.clear()
-        # img_cam.clear()
-
+        # set_radar.StopRadar()
+        np.save("D:/kaiku_report/20210414/pd.npy", self.pd_save)
+        np.save("D:/kaiku_report/20210414/RDI.npy", self.rdi)
+        np.save("D:/kaiku_report/20210414/RAI.npy", self.rai)
 
 
     def plot(self):
-        global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename,view_rai,p13d,nice
+        global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename,view_rai,p13d,nice, power_text
         # ---------------------------------------------------
         self.app = QtWidgets.QApplication(sys.argv)
         MainWindow = QtWidgets.QMainWindow()
         MainWindow.show()
         tmp_data = np.zeros(181)
-        # angCurve = pg.plot(tmp_data, pen='r')
         ui = Ui_MainWindow()
         ui.setupUi(MainWindow)
+        power_text = ui.label_4
 
         view_rdi = ui.graphicsView.addViewBox()
         view_rai = ui.graphicsView_2.addViewBox()
         view_cam = ui.graphicsView_3
+        self.lineup(view_cam)
         starbtn = ui.pushButton_start
         exitbtn = ui.pushButton_exit
         recordbtn = ui.pushButton_record
@@ -277,32 +267,12 @@ class Realtime_sys():
         pos = np.random.randint(-10, 10, size=(1000, 3))
         pos[:, 2] = np.abs(pos[:, 2])
         p13d = gl.GLScatterPlotItem(pos = pos,color=[50, 50, 50, 255])
-        # origin = gl.GLScatterPlotItem(pos = np.zeros([1,3]),color=[255, 0, 0, 255])\
-
-        origin = gl.GLScatterPlotItem(pos = np.array([[0, 0.075 ,0],[0, 0.075*2 ,0],[0, 0.075*3 ,0],[0, 0.075*4 ,0],[0, 0.075*5 ,0],[0, 0.075*6 ,0]]),color=[255, 255, 255, 255])
-        origin1 = gl.GLScatterPlotItem(pos = np.array([[0.075*-3, 0.3 ,0],[0.075*-2,0.3,0],[0.075*-1,0.3,0],[0.075*1,0.3,0],[0.075*2,0.3,0],[0.075*3,0.3,0]]),color=[255, 255, 255, 255])
-        origin2 = gl.GLScatterPlotItem(pos = np.array([[0, 0.3 ,0.075*-3],[0,0.3,0.075*-2],[0,0.3,0.075*-1],[0,0.3,0.075*1],[0,0.3,0.075*2],[0,0.3,0.075*3]]),color=[255, 255, 255, 255])
-        view_cam.addItem(origin1)
-        view_cam.addItem(origin2)
-        origin_P = gl.GLScatterPlotItem(pos=np.array(
-            [[0, 0, 0]]), color=[255, 0, 0, 255])
-        view_cam.addItem(origin_P)
-        self.hand_line = gl.GLLinePlotItem(pos=np.array([[[0, 0, 0], [0, 0.075*10, 0]]]),
-                                           color=[128, 255, 128, 255], antialias=False)
-        view_cam.addItem(self.hand_line)
-        self.hand_line1= gl.GLLinePlotItem(pos=np.array([[[-0.075*8, 0.075*4, 0], [0.075*8, 0.075*4, 0]]]),
-                                           color=[128, 255, 128, 255], antialias=False)
-        view_cam.addItem(self.hand_line1)
-        self.hand_line2= gl.GLLinePlotItem(pos=np.array([[[0, 0.075*4, -0.075*8], [0, 0.075*4, 0.075*8]]]),
-                                           color=[128, 255, 128, 255], antialias=False)
-        view_cam.addItem(self.hand_line2)
-        # coord = gl.GLAxisItem(glOptions="opaque")
-        # coord.setSize(10, 10, 10)
+        origin = gl.GLScatterPlotItem(pos = np.zeros([1,3]),color=[255, 0, 0, 255])
+        coord = gl.GLAxisItem(glOptions="opaque")
+        coord.setSize(10, 10, 10)
         view_cam.addItem(p13d)
-        # view_cam.addItem(coord)
+        view_cam.addItem(coord)
         view_cam.addItem(origin)
-
-
 
         # ang_cuv = pg.PlotDataItem(tmp_data, pen='r')
         # Colormap
@@ -337,10 +307,6 @@ class Realtime_sys():
         img_rai.setLookupTable(lookup_table)
         view_rdi.addItem(img_rdi)
         view_rai.addItem(img_rai)
-        # view_cam.addItem(img_cam)
-        # view_angCurve.addItem(ang_cuv)
-        #
-        # Set initial view bounds
         view_rdi.setRange(QtCore.QRectF(-5, 0, 140, 80))
         view_rai.setRange(QtCore.QRectF(10, 0, 160, 80))
         updateTime = ptime.time()
@@ -351,13 +317,51 @@ class Realtime_sys():
         savebtn.clicked.connect(self.SaveData)
         dcabtn.clicked.connect(self.ConnectDca)
         exitbtn.clicked.connect(self.app.instance().exit)
-        # pd_btn.btn.clicked.connect(self.Run_PD)
+        pd_btn.btn.clicked.connect(self.Run_PD)
         # -----------------------------------------------------
         self.app.instance().exec_()
         set_radar.StopRadar()
         print('=======================================')
 
+    def lineup(self,view_PD):
+        ###---------------------------------------------
+        self.hand = gl.GLScatterPlotItem(pos=np.array([[0, 0, 0]]), color=[0, 255, 0, 255], pxMode=True)
+        view_PD.addItem(self.hand)
+        self.indexfinger = gl.GLScatterPlotItem(pos=np.array([[0, 0, 0]]), color=[255, 0, 0, 255], pxMode=True)
+        view_PD.addItem(self.indexfinger)
+        self.thumb = gl.GLScatterPlotItem(pos=np.array([[0, 0, 0]]), color=[255, 0, 0, 255], pxMode=True)
+        view_PD.addItem(self.thumb)
+        origin = gl.GLScatterPlotItem(pos=np.array(
+            [[0, 0.075, 0], [0, 0.075 * 2, 0], [0, 0.075 * 3, 0], [0, 0.075 * 4, 0], [0, 0.075 * 5, 0],
+             [0, 0.075 * 6, 0]]), color=[255, 255, 255, 255])
+        origin1 = gl.GLScatterPlotItem(pos=np.array(
+            [[0.075 * -3, 0.3, 0], [0.075 * -2, 0.3, 0], [0.075 * -1, 0.3, 0], [0.075 * 1, 0.3, 0],
+             [0.075 * 2, 0.3, 0], [0.075 * 3, 0.3, 0]]), color=[255, 255, 255, 255])
+        origin2 = gl.GLScatterPlotItem(pos=np.array(
+            [[0, 0.3, 0.075 * -3], [0, 0.3, 0.075 * -2], [0, 0.3, 0.075 * -1], [0, 0.3, 0.075 * 1],
+             [0, 0.3, 0.075 * 2], [0, 0.3, 0.075 * 3]]), color=[255, 255, 255, 255])
+        view_PD.addItem(origin)
+        view_PD.addItem(origin1)
+        view_PD.addItem(origin2)
+        origin_P = gl.GLScatterPlotItem(pos=np.array(
+            [[0, 0, 0]]), color=[255, 0, 0, 255])
+        view_PD.addItem(origin_P)
+        self.hand_line = gl.GLLinePlotItem(pos=np.array([[[0, 0, 0], [0, 0.075 * 10, 0]]]),
+                                           color=[128, 255, 128, 255], antialias=False)
+        self.hand_linex = gl.GLLinePlotItem(pos=np.array([[[0, 0, 0], [0, 0.075 * 10, 0]]]),
+                                            color=[128, 255, 128, 255], antialias=False)
 
+        self.hand_line1 = gl.GLLinePlotItem(pos=np.array([[[-0.075 * 8, 0.075 * 4, 0], [0.075 * 8, 0.075 * 4, 0]]]),
+                                            color=[128, 255, 128, 255], antialias=False)
+
+        self.hand_line2 = gl.GLLinePlotItem(pos=np.array([[[0, 0.075 * 4, -0.075 * 8], [0, 0.075 * 4, 0.075 * 8]]]),
+                                            color=[128, 255, 128, 255], antialias=False)
+        view_PD.addItem(self.hand_line)
+        view_PD.addItem(self.hand_line1)
+        view_PD.addItem(self.hand_line2)
+        view_PD.addItem(self.hand_linex)
+
+        ###---------------------------------------------
 if __name__ == '__main__':
     print('======Real Time Data Capture Tool======')
     count = 0
@@ -391,12 +395,12 @@ if __name__ == '__main__':
     # sockConfig.bind(config_address)
 
     opencamera = False
-    # image_pro  = deal_imag()
-    # image_pro.start()
-    # lock = threading.Lock()
+
+    lock = threading.Lock()
     if opencamera:
-        cam1 = CamCapture(1, 'First', 1, "lock", CAMData, cam_rawData, mode=1,mp4_path="D:/kaiku_report/20210429/")
-        cam2 = CamCapture(0, 'Second', 0, "lock", CAMData2, cam_rawData2, mode=1,mp4_path="D:/kaiku_report/20210429/")
+        cam1 = CamCapture(1, 'First', 1, lock, CAMData, cam_rawData, mode=1,mp4_path='C:/Users/lab210/Desktop/')
+        cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1,mp4_path='C:/Users/lab210/Desktop/')
+
     collector = UdpListener('Listener', BinData, frame_length, address, buff_size, rawData)
     processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, pointcloud, 0, "0105", status=0)
     if opencamera:
@@ -409,14 +413,11 @@ if __name__ == '__main__':
 
     # sockConfig.sendto(send_cmd('6'), FPGA_address_cfg)
     # sockConfig.close()
-    cam1.join(timeout=1)
-    cam2.join(timeout=1)
     collector.join(timeout=1)
     processor.join(timeout=1)
     if opencamera:
         cam1.close()
         cam2.close()
-
-    print("Program Close")
     set_radar.StopRadar()
+    print("Program Close")
     sys.exit()

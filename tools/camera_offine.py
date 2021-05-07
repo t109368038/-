@@ -13,6 +13,7 @@ class CamCapture():
     def __init__(self, path):
         self.path = path
         self.capture = cv2.VideoCapture(path)
+        print(self.capture.get(7))
         self.disply_width = 640
         self.display_height = 480
 
@@ -20,10 +21,10 @@ class CamCapture():
         ret,frame  = self.capture.read()
 
         if ret == True :
-            frame = np.rot90(frame,2)
+            # frame = np.rot90(frame,2)
             qt_img = self.convert_cv_qt(frame)
 
-            print(type(qt_img))
+            # print(type(qt_img))
             return qt_img
 
     def convert_cv_qt(self, cv_img):

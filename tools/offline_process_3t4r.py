@@ -51,7 +51,7 @@ class DataProcessor():
             doppler_resolution = mm.dsp.doppler_resolution(bandwidth, 60, 33.02, 9.43, 16, 3)
 
             raw_data = np.reshape(raw_data,[-1,4,64])
-            print(np.shape(raw_data))
+            # print(np.shape(raw_data))
             radar_cube = mm.dsp.range_processing(raw_data, window_type_1d=Window.HANNING)
             assert radar_cube.shape == (
                 48, 4, 64), "[ERROR] Radar cube is not the correct shape!" #(numChirpsPerFrame, numRxAntennas, numADCSamples)
@@ -96,8 +96,9 @@ class DataProcessor():
                 azimuth_map = np.abs(rai)
 
             elif RAI_mode == 2:
+                # pass
                 azimuth_map = Range_Angle(azimuth_ant_1, 90)
-                print("azimuth_map:{}".format(np.shape(azimuth_map)))
+                # print("azimuth_map:{}".format(np.shape(azimuth_map)))
                 ang_thresholdDoppler, ang_noiseFloorDoppler = np.apply_along_axis(func1d=mm.dsp.ca_,
                                                                           axis=0,
                                                                           arr=azimuth_map.T,
@@ -159,6 +160,7 @@ class DataProcessor():
             dtype_location = '(' + str(3) + ',)<f4' # 3 == numTxAntennas
             dtype_detObj2D = np.dtype({'names': ['rangeIdx', 'dopplerIdx', 'peakVal', 'location', 'SNR'],
                                        'formats': ['<i4', '<i4', '<f4', dtype_location, '<f4']})
+
             detObj2DRaw = np.zeros((det_peaks_indices.shape[0],), dtype=dtype_detObj2D)
             detObj2DRaw['rangeIdx'] = det_peaks_indices[:, 0].squeeze()
             detObj2DRaw['dopplerIdx'] = det_peaks_indices[:, 1].squeeze()
@@ -166,7 +168,6 @@ class DataProcessor():
             detObj2DRaw['SNR'] = snr.flatten()
 
             detObj2DRaw = mm.dsp.prune_to_peaks(detObj2DRaw, det_matrix, chirp, reserve_neighbor=True) # 16 = numDopplerBins
-
             # --- Peak Grouping
             detObj2D = mm.dsp.peak_grouping_along_doppler(detObj2DRaw, det_matrix, 16) # 16 = numDopplerBins
 
@@ -186,9 +187,24 @@ class DataProcessor():
                                                                                       range_resolution,
                                                                                       method='Bartlett')
             if RAI_mode==2:
-                det_matrix_vis  =np.fft.fftshift(full_mask, axes=1)
+                # det_matrix_vis  =np.fft.fftshift(full_mask, axes=1)
+                # det_matrix_vis= det_matrix_vis&full_mask
+                # print(full_mask)
+                # print(np.shape(np.where(np.any(full_mask == False))))
+                # det1 =  azimuth_ant_1
+                det1 = np.zeros([16,64,8])
+                mask_tupe = (np.where(full_mask==True))
+                x =list(mask_tupe[0])
+                y =list(mask_tupe[1])
+
+                for i in range(len(x)):
+                    det1[y[i],x[i],:]  = azimuth_ant_1[y[i],x[i],:]
+                # det1 = np.fft.fftshift(det1, axes=1)
+                azimuth_map = Range_Angle(det1, 90)
             # return  np.flip(det_matrix_vis),np.flip(azimuth_map),xyzVec
             # else:
+            # return  det_matrix_vis,azimuth_map.sum(0),xyzVec
             return  det_matrix_vis,azimuth_map.sum(0),xyzVec
 
+        output_a_angles.append((180 / np.pi) * np.arcsin(np.sin(a_angle) * np.cos(e_angle)))
 

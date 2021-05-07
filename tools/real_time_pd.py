@@ -4,23 +4,21 @@ import socket
 import DSP_2t4r
 import mmwave as mm
 from mmwave.dsp.utils import Window
-
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
 
 class UdpListener(th.Thread):
     def __init__(self, name, bin_data, data_frame_length, data_address, buff_size, save_data):
         """
         :param name: str
                         Object name
-
         :param bin_data: queue object
                         A queue used to store adc data from udp stream
-
         :param data_frame_length: int
                         Length of a single frame
-
         :param data_address: (str, int)
                         Address for binding udp stream, str for host IP address, int for host data port
-
         :param buff_size: int
                         Socket buffer size
         """
@@ -71,23 +69,18 @@ class DataProcessor(th.Thread):
         """
         :param name: str
                         Object name
-
         :param config: sequence of ints
                         Radar config in the order
                         [0]: samples number
                         [1]: chirps number
                         [3]: transmit antenna number
                         [4]: receive antenna number
-
         :param bin_queue: queue object
                         A queue for access data received by UdpListener
-
         :param rdi_queue: queue object
                         A queue for store RDI
-
         :param rai_queue: queue object
                         A queue for store RDI
-
         """
         th.Thread.__init__(self, name=name)
         self.adc_sample = config[0]
@@ -203,7 +196,8 @@ class DataProcessor(th.Thread):
                                                                   clutter_removal_enabled=True)
                 det_matrix_vis = np.fft.fftshift(det_matrix, axes=1)
 
-                self.rdi_queue.put(det_matrix_vis / det_matrix_vis.max())
+                # self.rdi_queue.put(det_matrix_vis / det_matrix_vis.max())
+                self.rdi_queue.put(det_matrix)
 
                 # (4) Object Detection
                 fft2d_sum = det_matrix.astype(np.int64)
@@ -326,10 +320,10 @@ class DataProcessor(th.Thread):
                 #     if cluster_np.size != 0:
                 #         if max(cluster_np) > max_size:
                 #             max_size = max(cluster_np)
-            elif mode ==3:
+            elif mode == 3:
                 range_resolution, bandwidth = mm.dsp.range_resolution(128)
+                # range_resolution, bandwidth = mm.dsp.range_resolution(64, 2000, 121.134)
                 doppler_resolution = mm.dsp.doppler_resolution(bandwidth, 60, 33.02, 9.43, 16, 3)
-
 
                 data = self.bin_queue.get()
                 data = np.reshape(data, [-1, 4])
@@ -340,10 +334,11 @@ class DataProcessor(th.Thread):
                 assert radar_cube.shape == (
                     48, 4, 64), "[ERROR] Radar cube is not the correct shape!" #(numChirpsPerFrame, numRxAntennas, numADCSamples)
 
+
+
                 # (3) Doppler Processing
                 det_matrix, aoa_input = mm.dsp.doppler_processing(radar_cube, num_tx_antennas=3,
-                                                               clutter_removal_enabled=True,
-                                                               # clutter_removal_enabled=False,
+                                                               clutter_removal_enabled=False,
                                                                window_type_2d=Window.HANNING, accumulate=True)
 
                 det_matrix_vis = np.fft.fftshift(det_matrix, axes=1)
@@ -392,7 +387,7 @@ class DataProcessor(th.Thread):
                 det_doppler_mask = (det_matrix > thresholdDoppler)
                 det_range_mask = (det_matrix > thresholdRange)
                 self.rdi_queue.put(np.flip(det_matrix_vis))
-                self.rai_queue.put(np.flip(azimuth_map.sum(0)))
+                self.rai_queue.put(np.flip(elevation_map.sum(0)))
 
                 # Get indices of detected peaks
                 full_mask = (det_doppler_mask & det_range_mask)
@@ -416,12 +411,18 @@ class DataProcessor(th.Thread):
                 # --- Peak Grouping
                 detObj2D = mm.dsp.peak_grouping_along_doppler(detObj2DRaw, det_matrix, 16) # 16 = numDopplerBins
 
+                #==== origin setting
+                # SNRThresholds2 = np.array([[2, 23], [10, 11.5], [35, 16]])
+                # peakValThresholds2 = np.array([[2, 275], [1, 400], [500, 0]])
+                #-------- new ---------
                 SNRThresholds2 = np.array([[2, 23], [10, 11.5], [35, 16]])
                 peakValThresholds2 = np.array([[2, 275], [1, 400], [500, 0]])
-                # SNRThresholds2 = np.array([[0, 15], [10, 16], [0 , 20]])
-                # SNRThresholds2 = np.array([[0, 20], [10, 0], [0 , 0]])
 
-                detObj2D = mm.dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 64, 0.5, # 64== numRangeBins
+                #==== origin setting
+                # detObj2D = mm.dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 64, 0.5, # 64== numRangeBins
+                                                   # range_resolution)
+                #--------- new --------
+                detObj2D = mm.dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 60, 50, # 64== numRangeBins
                                                    range_resolution)
 
                 azimuthInput = aoa_input[detObj2D['rangeIdx'], :, detObj2D['dopplerIdx']]
@@ -433,19 +434,3 @@ class DataProcessor(th.Thread):
                                                                                        method='Bartlett')
                 self.pd_queue.put(xyzVec)
 
-                # datax = np.reshape(raw_data,[16,12,64])
-                # datax = datax.transpose([0, 2, 1])
-                # # print(np.shape(datax))
-                # datax = datax[:,:,:8]
-                # datax = mm.dsp.compensation.clutter_removal(datax, axis=0)
-                # rdi_raw,rdi = DSP_2t4r.Range_Doppler(datax, mode=2, padding_size=[128, 64])
-                # # print(np.shape(rdi_raw))
-                # rdi_raw = rdi_raw.reshape([-1, 8])
-                # for i in range(8192):
-                #     self.out_matrix[i, :] = np.matmul(self.weight_matrix, rdi_raw[i, :])
-                # rai = self.out_matrix.reshape([128, 64, -1])
-                # rai = np.flip(np.abs(rai), axis=1)
-                # rai = np.flip(rai, axis=1)
-                # rai = np.abs(rai)
-                # self.rdi_queue.put(rdi.sum(2))
-                # self.rai_queue.put(rai.sum(0))
