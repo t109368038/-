@@ -29,12 +29,12 @@ from R3t4r_to_point_cloud_for_realtime import plot_pd
 # -----------------------------------------------
 # config = '../radar_config/IWR1843_cfg_3t4r_v3.4_1.cfg'
 # config = '../radar_config/xwr68xx_profile_2021_03_23T08_12_36_405.cfg'
-config = '../radar_config/xwr68xx_profile_2021_03_23T08_12_36_405_larrytest.cfg'
+config = '../radar_config/xwr68xx_profile_2021_03_23T08_12_36_405.cfg'
 # config = '../radar_config/xwr18xx_profile_2021_03_09T10_45_11_974.cfg'
 # config = '../radar_config/IWR1843_3d.cfg'
 # config = '../radar_config/xwr18xx_profile_2021_03_05T07_10_37_413.cfg'
 
-set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM5', BaudRate=115200)
+set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM22', BaudRate=115200)
 
 class Realtime_sys():
     def __init__(self):
@@ -42,7 +42,8 @@ class Realtime_sys():
         self.pd_save = []
         self.rdi = []
         self.rai = []
-
+        self.raw = []
+        self.count_frame = 0
     def send_cmd(self, code):
         # command code list
         CODE_1 = (0x01).to_bytes(2, byteorder='little', signed=False)
@@ -103,33 +104,32 @@ class Realtime_sys():
         global count, view_rai, p13d, power_text
 
         win_param = [8, 8, 3, 3]
-
-
         if not RDIData.empty():
             rd = RDIData.get()
             # img_rdi.setImage(np.rot90(rd, 1))
             #------no static remove------
-            # img_rdi.setImage(np.rot90(rd, 1), levels=[150, 250])
+            img_rdi.setImage(np.rot90(rd, 1), levels=[150, 250])
             # ------ static remove------
-            img_rdi.setImage(np.rot90(rd, 1), levels=[40, 150])
+            # img_rdi.setImage(np.rot90(rd, 1), levels=[40, 150])
             power_text.setText('Power:' + str(np.mean(rd)))
-
+        print(np.max(rd))
     def RAI_update(self):
         global count, view_rai, p13d
         if not RAIData.empty():
             a = RAIData.get()
             # img_rai.setImage(np.fliplr(np.flip(a, axis=0)).T)
             # ------no static remove------
-            # img_rai.setImage(np.fliplr(np.flip(a, axis=0)).T, levels=[20e4, 50.0e4])
+            img_rai.setImage(np.fliplr(np.flip(a, axis=0)).T, levels=[15e4, 50.0e4])
             # ------ static remove ------
-            img_rai.setImage(np.fliplr(np.flip(a, axis=0)).T, levels=[0.5e4, 9.0e4])
+            # img_rai.setImage(np.fliplr(np.flip(a, axis=0)).T, levels=[0.5e4, 9.0e4])
 
 
     def PD_update(self):
         global count, view_rai, p13d,nice,ax
         # --------------- plot 3d ---------------
         pos = pointcloud.get()
-
+        mean_pos = np.mean(pos,axis=1)
+        self.mean_point.setData(pos = mean_pos[:3],size=20)
         # pos = np.delete(pos[:3], np.where((pos[:,3] >10) & (pos[:,3]<50))[0], axis=0)
         pos = np.transpose(pos, [1, 0])
         # self.Run_PD(pos)
@@ -137,7 +137,8 @@ class Realtime_sys():
             self.pd_save.append(pos)
             self.rdi = np.append(self.rdi, RDIData.get())
             self.rai = np.append(self.rai, RAIData.get())
-
+            self.raw = np.append(self.raw,rawData.get())
+            self.count_frame += 1
         p13d.setData(pos=pos[:,:3],color= [1,0.35,0.02,1],pxMode= True)
 
 
@@ -168,8 +169,8 @@ class Realtime_sys():
     def StartRecord(self):
         # processor.status = 1
         collector.status = 1
-        cam1.status = 1
-        cam2.status = 1
+        # cam1.status = 1
+        # cam2.status = 1
         self.pd_save_status = 1
         print('Start Record Time:', (time.ctime(time.time())))
         print('=======================================')
@@ -178,8 +179,8 @@ class Realtime_sys():
     def StopRecord(self):
         # processor.status = 0
         collector.status = 0
-        cam1.status = 0
-        cam2.status = 0
+        # cam1.status = 0
+        # cam2.status = 0
         self.pd_save_status=0
         print('Stop Record Time:', (time.ctime(time.time())))
         print('=======================================')
@@ -215,10 +216,12 @@ class Realtime_sys():
     def SaveData(self):
         global savefilename, sockConfig, FPGA_address_cfg
         # set_radar.StopRadar()
-        np.save("D:/kaiku_report/20210414/pd.npy", self.pd_save)
-        np.save("D:/kaiku_report/20210414/RDI.npy", self.rdi)
-        np.save("D:/kaiku_report/20210414/RAI.npy", self.rai)
-
+        # np.save("D:/kaiku_report/20210414/pd.npy", self.pd_save)
+        # np.save("D:/kaiku_report/20210414/RDI.npy", self.rdi)
+        # np.save("D:/kaiku_report/20210414/RAI.npy", self.rai)
+        np.save("C:/Users/user/Desktop/data/raw.npy", self.raw)
+        self.raw = []
+        print(self.count_frame)
 
     def plot(self):
         global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename,view_rai,p13d,nice, power_text
@@ -235,6 +238,8 @@ class Realtime_sys():
         view_rai = ui.graphicsView_2.addViewBox()
         view_cam = ui.graphicsView_3
         self.lineup(view_cam)
+        # self.nine_grid_in_xz_plane(view_cam)
+        self.nine_grid_in_xy_plane(view_cam)
         starbtn = ui.pushButton_start
         exitbtn = ui.pushButton_exit
         recordbtn = ui.pushButton_record
@@ -327,6 +332,8 @@ class Realtime_sys():
         ###---------------------------------------------
         self.hand = gl.GLScatterPlotItem(pos=np.array([[0, 0, 0]]), color=[0, 255, 0, 255], pxMode=True)
         view_PD.addItem(self.hand)
+        self.mean_point = gl.GLScatterPlotItem(pos=np.array([[0, 0, 0]]), color=[0, 255, 0, 255], pxMode=True)
+        view_PD.addItem(self.mean_point)
         self.indexfinger = gl.GLScatterPlotItem(pos=np.array([[0, 0, 0]]), color=[255, 0, 0, 255], pxMode=True)
         view_PD.addItem(self.indexfinger)
         self.thumb = gl.GLScatterPlotItem(pos=np.array([[0, 0, 0]]), color=[255, 0, 0, 255], pxMode=True)
@@ -340,26 +347,101 @@ class Realtime_sys():
         origin2 = gl.GLScatterPlotItem(pos=np.array(
             [[0, 0.3, 0.075 * -3], [0, 0.3, 0.075 * -2], [0, 0.3, 0.075 * -1], [0, 0.3, 0.075 * 1],
              [0, 0.3, 0.075 * 2], [0, 0.3, 0.075 * 3]]), color=[255, 255, 255, 255])
-        view_PD.addItem(origin)
-        view_PD.addItem(origin1)
-        view_PD.addItem(origin2)
+        # view_PD.addItem(origin)
+        # view_PD.addItem(origin1)
+        # view_PD.addItem(origin2)
         origin_P = gl.GLScatterPlotItem(pos=np.array(
             [[0, 0, 0]]), color=[255, 0, 0, 255])
         view_PD.addItem(origin_P)
         self.hand_line = gl.GLLinePlotItem(pos=np.array([[[0, 0, 0], [0, 0.075 * 10, 0]]]),
                                            color=[128, 255, 128, 255], antialias=False)
-        self.hand_linex = gl.GLLinePlotItem(pos=np.array([[[0, 0, 0], [0, 0.075 * 10, 0]]]),
+        self.hand_liney = gl.GLLinePlotItem(pos=np.array([[[0, 0, 0], [0, 0.075 * 10, 0]]]),
                                             color=[128, 255, 128, 255], antialias=False)
 
-        self.hand_line1 = gl.GLLinePlotItem(pos=np.array([[[-0.075 * 8, 0.075 * 4, 0], [0.075 * 8, 0.075 * 4, 0]]]),
+        self.hand_linex = gl.GLLinePlotItem(pos=np.array([[[-0.075 * 8, 0.075 * 4, 0.075*1], [0.075 * 8, 0.075 * 4, 0.075*1]]]),
+                                            color=[128, 255, 128, 255], antialias=False)
+        self.hand_linex_1 = gl.GLLinePlotItem(pos=np.array([[[-0.075 * 8, 0.075 * 4, 0], [0.075 * 8, 0.075 * 4, 0]]]),
                                             color=[128, 255, 128, 255], antialias=False)
 
-        self.hand_line2 = gl.GLLinePlotItem(pos=np.array([[[0, 0.075 * 4, -0.075 * 8], [0, 0.075 * 4, 0.075 * 8]]]),
+        self.hand_linez = gl.GLLinePlotItem(pos=np.array([[[0, 0.075 * 4, -0.075 * 8], [0, 0.075 * 4, 0.075 * 8]]]),
                                             color=[128, 255, 128, 255], antialias=False)
-        view_PD.addItem(self.hand_line)
-        view_PD.addItem(self.hand_line1)
-        view_PD.addItem(self.hand_line2)
-        view_PD.addItem(self.hand_linex)
+        # view_PD.addItem(self.hand_line)
+        # view_PD.addItem(self.hand_liney)
+        # view_PD.addItem(self.hand_linez)
+        # view_PD.addItem(self.hand_linex)
+        # view_PD.addItem(self.hand_linex_1)
+    def nine_grid_in_xz_plane(self,view_PD):
+        x  = 5
+        x1 = 0.075*x+0.15*x
+        x2 = 0.075*x
+        y  = 5
+        self.hand_linex1 = gl.GLLinePlotItem(pos=np.array([[[0.075*x1, 0.075 * y, 0.075*x1], [-0.075*x1, 0.075 * y, 0.075*x1]]]),
+                                           color=[128, 255, 128, 255], antialias=False)
+        self.hand_linex2 = gl.GLLinePlotItem(pos=np.array([[[0.075*x1, 0.075 * y, 0.075*x2], [-0.075*x1, 0.075 * y, 0.075*x2]]]),
+                                           color=[128, 255, 128, 255], antialias=False)
+        self.hand_linex3 = gl.GLLinePlotItem(pos=np.array([[[0.075*x1, 0.075 * y, 0.075*-1*x2], [-0.075*x1, 0.075 * y, 0.075*-1*x2]]]),
+                                           color=[128, 255, 128, 255], antialias=False)
+        self.hand_linex4 = gl.GLLinePlotItem(pos=np.array([[[0.075*x1, 0.075 * y, 0.075*-1*x1], [-0.075*x1, 0.075 * y, 0.075*-1*x1]]]),
+                                           color=[128, 255, 128, 255], antialias=False)
+
+        self.hand_linez1 = gl.GLLinePlotItem(pos=np.array([[[0.075*-1*x1, 0.075 * y, 0.075*x1], [0.075*-1*x1, 0.075 * y, 0.075*-1*x1]]]),
+                                           color=[128, 255, 128, 255], antialias=False)
+        self.hand_linez2 = gl.GLLinePlotItem(pos=np.array([[[0.075*-1*x2, 0.075 * y, 0.075*x1], [0.075*-1*x2, 0.075 * y, 0.075*-1*x1]]]),
+                                           color=[128, 255, 128, 255], antialias=False)
+        self.hand_linez3 = gl.GLLinePlotItem(pos=np.array([[[0.075*x2, 0.075 * y, 0.075*x1], [0.075*x2,0.075 * y, 0.075*-1*x1]]]),
+                                           color=[128, 255, 128, 255], antialias=False)
+        self.hand_linez4 = gl.GLLinePlotItem(pos=np.array([[[0.075*x1, 0.075 * y ,0.075*x1], [0.075*x1, 0.075 * y, 0.075*-1*x1]]]),
+                                           color=[128, 255, 128, 255], antialias=False)
+
+        view_PD.addItem(self.hand_linex1)
+        view_PD.addItem(self.hand_linex2)
+        view_PD.addItem(self.hand_linex3)
+        view_PD.addItem(self.hand_linex4)
+        view_PD.addItem(self.hand_linez1)
+        view_PD.addItem(self.hand_linez2)
+        view_PD.addItem(self.hand_linez3)
+        view_PD.addItem(self.hand_linez4)
+
+    def nine_grid_in_xy_plane(self, view_PD):
+        x = 5
+        x1 = 0.075 * x + 0.15 * x
+        x2 = 0.075 * x
+        y = 0
+        y2 = 0.075*2.5
+        self.hand_linex1 = gl.GLLinePlotItem(
+            pos=np.array([[[0.075 * x1,  0.075 * x1 + y2 ,0.075 * y], [-0.075 * x1, 0.075 * x1+ y2, 0.075 * y]]]),
+            color=[128, 255, 128, 255], antialias=False)
+        self.hand_linex2 = gl.GLLinePlotItem(
+            pos=np.array([[[0.075 * x1, 0.075 * x2+ y2, 0.075 * y], [-0.075 * x1, 0.075 * x2+ y2, 0.075 * y]]]),
+            color=[128, 255, 128, 255], antialias=False)
+        self.hand_linex3 = gl.GLLinePlotItem(
+            pos=np.array([[[0.075 * x1, 0.075 * -1 * x2+ y2, 0.075 * y], [-0.075 * x1, 0.075 * -1 * x2+ y2, 0.075 * y]]]),
+            color=[128, 255, 128, 255], antialias=False)
+        self.hand_linex4 = gl.GLLinePlotItem(
+            pos=np.array([[[0.075 * x1, 0.075 * -1 * x1+ y2, 0.075 * y], [-0.075 * x1, 0.075 * -1 * x1+ y2, 0.075 * y]]]),
+            color=[128, 255, 128, 255], antialias=False)
+
+        self.hand_liney1 = gl.GLLinePlotItem(pos=np.array(
+            [[[0.075 * -1 * x1, 0.075 * x1+ y2, 0.075 * y], [0.075 * -1 * x1, 0.075 * -1 * x1+ y2, 0.075 * y]]]),
+                                             color=[128, 255, 128, 255], antialias=False)
+        self.hand_liney2 = gl.GLLinePlotItem(pos=np.array(
+            [[[0.075 * -1 * x2, 0.075 * x1+ y2, 0.075 * y], [0.075 * -1 * x2, 0.075 * -1 * x1+ y2, 0.075 * y]]]),
+                                             color=[128, 255, 128, 255], antialias=False)
+        self.hand_liney3 = gl.GLLinePlotItem(
+            pos=np.array([[[0.075 * x2, 0.075 * x1+ y2, 0.075 * y], [0.075 * x2, 0.075 * -1 * x1+ y2, 0.075 * y]]]),
+            color=[128, 255, 128, 255], antialias=False)
+        self.hand_liney4 = gl.GLLinePlotItem(
+            pos=np.array([[[0.075 * x1, 0.075 * x1+ y2, 0.075 * y], [0.075 * x1, 0.075 * -1 * x1+ y2, 0.075 * y]]]),
+            color=[128, 255, 128, 255], antialias=False)
+
+        view_PD.addItem(self.hand_linex1)
+        view_PD.addItem(self.hand_linex2)
+        view_PD.addItem(self.hand_linex3)
+        view_PD.addItem(self.hand_linex4)
+        view_PD.addItem(self.hand_liney1)
+        view_PD.addItem(self.hand_liney2)
+        view_PD.addItem(self.hand_liney3)
+        view_PD.addItem(self.hand_liney4)
 
         ###---------------------------------------------
 if __name__ == '__main__':
@@ -398,8 +480,8 @@ if __name__ == '__main__':
 
     lock = threading.Lock()
     if opencamera:
-        cam1 = CamCapture(1, 'First', 1, lock, CAMData, cam_rawData, mode=1,mp4_path='C:/Users/lab210/Desktop/')
-        cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1,mp4_path='C:/Users/lab210/Desktop/')
+        cam1 = CamCapture(1, 'First', 1, lock, CAMData, cam_rawData, mode=1,mp4_path='C:/Users/user/Desktop')
+        cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1,mp4_path='C:/Users/user/Desktop')
 
     collector = UdpListener('Listener', BinData, frame_length, address, buff_size, rawData)
     processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, pointcloud, 0, "0105", status=0)

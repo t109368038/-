@@ -1,9 +1,7 @@
-import threading as th
 import numpy as np
-import socket
-import DSP_2t4r
 import mmwave as mm
 from mmwave.dsp.utils import Window
+
 class DataProcessor():
     def __init__(self):
         """
@@ -176,16 +174,21 @@ class DataProcessor():
             # SNRThresholds2 = np.array([[0, 15], [10, 16], [0 , 20]])
             # SNRThresholds2 = np.array([[0, 20], [10, 0], [0 , 0]])
 
-            detObj2D = mm.dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 59, 55, # 64== numRangeBins
+            detObj2D = mm.dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 58, 55, # 64== numRangeBins
                                                   range_resolution)
 
             azimuthInput = aoa_input[detObj2D['rangeIdx'], :, detObj2D['dopplerIdx']]
+
+
             # print(np.shape(detObj2D['dopplerIdx']))
             Psi, Theta, Ranges, velocity, xyzVec = mm.dsp.beamforming_naive_mixed_xyz(azimuthInput,
                                                                                       63-detObj2D['rangeIdx'],
-                                                                                      detObj2D['dopplerIdx'],
+                                                                                      63-detObj2D['dopplerIdx'],
                                                                                       range_resolution,
                                                                                       method='Bartlett')
+            # print("psi = {}".format(Psi))
+            # print("Theta = {}".format(Theta))
+            # print(xyzVec)
             if RAI_mode==2:
                 # det_matrix_vis  =np.fft.fftshift(full_mask, axes=1)
                 # det_matrix_vis= det_matrix_vis&full_mask
@@ -204,7 +207,9 @@ class DataProcessor():
             # return  np.flip(det_matrix_vis),np.flip(azimuth_map),xyzVec
             # else:
             # return  det_matrix_vis,azimuth_map.sum(0),xyzVec
-            return  det_matrix_vis,azimuth_map.sum(0),xyzVec
+
+
+            return  det_matrix_vis,azimuth_map.sum(0)[6:9,:],elevation_map.sum(0)[6:9,:].T,xyzVec
 
         output_a_angles.append((180 / np.pi) * np.arcsin(np.sin(a_angle) * np.cos(e_angle)))
 

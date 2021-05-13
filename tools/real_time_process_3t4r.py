@@ -129,7 +129,7 @@ class DataProcessor(th.Thread):
             mode 2 --> RDI RAI build by openradar method 
             mode 3 
             '''
-            mode = 3
+            mode = 1
             if mode == 1:
                 data = self.bin_queue.get()
                 data = np.reshape(data, [-1, 4])
@@ -148,7 +148,7 @@ class DataProcessor(th.Thread):
                 # # ---------------------------------------------------------------------
                 frame_count += 1
 
-                data1 = mm.dsp.compensation.clutter_removal(data1, axis=0)
+                #data1 = mm.dsp.compensation.clutter_removal(data1, axis=0)
 
                 # self.print_shape(data1)
                 rdi_raw,rdi = DSP_2t4r.Range_Doppler(data1, mode=2, padding_size=[128, 64])
@@ -178,9 +178,9 @@ class DataProcessor(th.Thread):
                 # rai1 = np.fft.fftshift(rai1)
                 #---------------------------------------------------------------------
 
-                self.rdi_queue.put(rdi.sum(2))
+                self.rdi_queue.put(rdi)
                 # self.rai_queue.put(rdi1.sum(2))
-                self.rai_queue.put(rai.sum(0))
+                # self.rai_queue.put(rai)
                 # self.rai_queue.put(rai1.sum(0))
             elif mode == 2:
                 range_resolution, bandwidth = mm.dsp.range_resolution(64, 2000, 121.134)
