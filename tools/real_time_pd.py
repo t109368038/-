@@ -338,8 +338,6 @@ class DataProcessor(th.Thread):
                                                                window_type_2d=Window.HANNING, accumulate=True)
 
                 det_matrix_vis = np.fft.fftshift(det_matrix, axes=1)
-
-
                 # (4) Angle Processing sample, channel, chirp
                 azimuth_ant_1 = aoa_input[:, :2 * 4, :]
                 azimuth_ant_2 = aoa_input[:, 2 * 4:, :]
@@ -362,8 +360,6 @@ class DataProcessor(th.Thread):
 
                 # (5) Object Detection
                 fft2d_sum = det_matrix.astype(np.int64)
-
-
                 thresholdDoppler, noiseFloorDoppler = np.apply_along_axis(func1d=mm.dsp.ca_,
                                                                           axis=0,
                                                                           arr=fft2d_sum.T,
@@ -417,6 +413,7 @@ class DataProcessor(th.Thread):
 
                 azimuthInput = aoa_input[detObj2D['rangeIdx'], :, detObj2D['dopplerIdx']]
                 # print(np.shape(detObj2D['dopplerIdx']))
+
                 Psi, Theta, Ranges, velocity, xyzVec = mm.dsp.beamforming_naive_mixed_xyz(azimuthInput,
                                                                                        63-detObj2D['rangeIdx'],
                                                                                        detObj2D['dopplerIdx'],

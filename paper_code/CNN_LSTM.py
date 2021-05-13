@@ -46,7 +46,7 @@ def lr_scheduler(epoch):
     return lr
 
 
-def plot_confusion_matrix(cm_std, classes, save_file=False):
+def plot_confusion_matrix(cm_std, classes, save_file=False, savepath=None):
     plt.figure(figsize=(12, 8), dpi=60)
     x_location = np.array(range(classes))
     x, y = np.meshgrid(x_location, x_location)
@@ -65,19 +65,42 @@ def plot_confusion_matrix(cm_std, classes, save_file=False):
     plt.colorbar()
     plt.show()
     if save_file:
-        plt.savefig()
+        plt.savefig(savepath)
 
+
+def channel_mean(x_train_new):
+    num_train = x_train_new.shape[0]
+    width_train = x_train_new.shape[2]
+    height_train = x_train_new.shape[3]
+    channel_train = x_train_new.shape[4]
+    x_train_mean_perChannel = np.zeros((num_train, 64, width_train, height_train, channel_train))
+    for i in range(0, channel_train):
+        temp = np.mean(x_train_new[:, :, :, :, i])
+        temp = np.repeat(temp, height_train, axis=0)
+        temp_2 = temp[np.newaxis, ...]
+        temp_2 = np.repeat(temp_2, width_train, axis=0)
+        temp_2 = temp_2[np.newaxis, ...]
+        temp_2 = np.repeat(temp_2, 64, axis=0)
+        temp_3 = temp_2[np.newaxis, ...]
+        temp_3 = np.repeat(temp_3, num_train, axis=0)
+        x_train_mean_perChannel[:, :, :, :, i] = temp_3
+    return x_train_mean_perChannel
 
 
 data_path = 'C:/data2/padding_h5_2t4r/RAI_rotate/'
+out_path = 'E:/NTUT-master/Result/Original Data(Yen Li)/Training-Result/MATLAB-2T4R-RAI/S01_STD_train/'
+if not os.path.isdir(out_path):
+    os.makedirs(out_path)
+
+result_times = 1
 epochs = 40
-sense = [0]
+sense = [0, 1]
 gesture = 12
 times = 10
 frame_num = 64
 batch_sizes = 12
 dataset_type = "RAI"
-
+print('Running Times:', result_times)
 print("Training Settings：")
 print('==============================')
 print("Epochs：", epochs)
@@ -88,13 +111,38 @@ print('==============================')
 
 data_s0, label_s0 = read_dataset(data_path, sense[0], gesture, dataset_type, times, frame_num)
 data_s0 = np.array(data_s0)
-# data_s1, label_s1 = read_dataset(data_path, sense[1], gesture, dataset_type, times, frame_num)
-# data_s1 = np.array(data_s1)
+
+data_s1, label_s1 = read_dataset(data_path, sense[1], gesture, dataset_type, times, frame_num)
+data_s1 = np.array(data_s1)
+
+data = np.concatenate([data_s0, data_s1], axis=0)
+label = np.concatenate([label_s0, label_s1], axis=0)
+
 
 # x_train, x_test, y_train, y_test = train_test_split(data_s0, label_s0, test_size=0.2, random_state=2)
 # data_s0, data_s1, label_s0, label_s1 = shuffle(data_s0, data_s1, label_s0, label_s1, random_state=2)
+
 # for cross sense
-x_train_s0, x_test_s0, y_train_s0, y_test_s0 = train_test_split(data_s0, label_s0, test_size=0.2, random_state=2)
+
+# train data STD
+
+x_train_s0, x_test_s0, y_train_s0, y_test_s0 = train_test_split(data, label, test_size=0.2, random_state=2)
+mean_channel = channel_mean(x_train_s0)
+train_data_s0_std = np.zeros((1, 1))
+for j in range(0, 1):
+    train_data_s0_std[:, j] = np.std(x_train_s0[:, :, :, :, j])
+
+x_train_s0 = (x_train_s0 - np.mean(mean_channel)) / train_data_s0_std
+x_test_s0 = (x_test_s0 - np.mean(mean_channel)) / train_data_s0_std
+
+# all data STD
+# mean_channel = channel_mean(data_s0)
+# train_data_s0_std = np.zeros((1, 1))
+# for j in range(0, 1):
+#     train_data_s0_std[:, j] = np.std(data_s0[:, :, :, :, j])
+#
+# data_s0 = (data_s0 - np.mean(mean_channel)) / train_data_s0_std
+# x_train_s0, x_test_s0, y_train_s0, y_test_s0 = train_test_split(data_s0, label_s0, test_size=0.2, random_state=2)
 # x_train_s1, x_test_s1, y_train_s1, y_test_s1 = train_test_split(data_s1, label_s1, test_size=0.2, random_state=2)
 
 # x_train = np.concatenate([x_train_s0, x_train_s1], axis=0)
@@ -115,10 +163,7 @@ print("Testing Data Shape：", np.shape(x_test_s0))
 print("Training Label Shape：", np.shape(y_train_s0))
 print("Testing Label Shape：", np.shape(y_test_s0))
 
-
-
 scheduler = keras.callbacks.LearningRateScheduler(lr_scheduler)
-
 # model ==============================
 model = Sequential()
 
@@ -163,7 +208,6 @@ model.compile(optimizer=sgd,
               loss='categorical_crossentropy',
               metrics=['accuracy'])
 model.summary()
-
 # model ==============================
 history = model.fit(x_train_s0, y_train_s0,
                     batch_size=batch_sizes, epochs=epochs, shuffle=False, verbose=1,
@@ -178,9 +222,12 @@ prediction_cat = np.argmax(prediction, axis=1)
 y_test = np.reshape(y_test_s0, [-1, gesture])
 y_cat = np.argmax(y_test, axis=1)
 
+model.save(out_path + str(result_times) + 'model.h5')
+model.save_weights(out_path + str(result_times) + 'weights.h5')
+
 print("Plot Confusion Matrix")
 cm = confusion_matrix(y_cat, prediction_cat)  # get confusion matrix
 cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]  # normalize cm
-plot_confusion_matrix(cm_normalized, gesture, False)  # plot confusion matrix
+plot_confusion_matrix(cm_normalized, gesture, True,
+                      out_path + 'confusion_matrix' + str(result_times) + '.png')  # plot confusion matrix
 print("Program Terminate")
-sys.exit(0)
