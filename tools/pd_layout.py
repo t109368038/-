@@ -154,6 +154,16 @@ class Ui_MainWindow(object):
         self.label_4.setFont(font)
         self.label_4.setObjectName("label_4")
 
+        self.label_frame_count_label = QtWidgets.QLabel(self.centralwidget)
+        self.label_frame_count_label.setGeometry(QtCore.QRect(700, 700, 120, 30))
+        self.label_frame_count_label.setFont(font)
+        self.label_frame_count_label.setObjectName("label_frame_count")
+
+        self.label_frame_count = QtWidgets.QLabel(self.centralwidget)
+        self.label_frame_count.setGeometry(QtCore.QRect(800, 670, 120, 30))
+        self.label_frame_count.setFont(font)
+        self.label_frame_count.setObjectName("label_frame_count")
+
         # self.textEdit = QTextEdit(self.centralwidget)
         # self.textEdit.setGeometry(QtCore.QRect(780, 670, 150, 30))
         # self.textEdit.setFont(font)
@@ -182,3 +192,5 @@ class Ui_MainWindow(object):
         self.pushButton_save.setText(_translate("MainWindow", "Save"))
         self.pushButton_DCA.setText(_translate("MainWindow", "Connect DCA1000"))
         self.pd_btn.btn.setText(_translate("MainWindow", "Point cloud"))
+        self.label_frame_count_label.setText(_translate("MainWindow", "frame count: "))
+        self.label_frame_count.setText(_translate("MainWindow","<count>"))

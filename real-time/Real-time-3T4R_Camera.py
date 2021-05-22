@@ -24,7 +24,7 @@ from R3t4r_to_point_cloud_for_realtime import plot_pd
 # -----------------------------------------------
 # config = '../radar_config/IWR1843_cfg_3t4r_v3.4_1.cfg'
 config = '../radar_config/xwr68xx_profile_2021_03_23T08_12_36_405.cfg'
-# config = '../radar_config/xwr18xx_profile_2021_03_09T10_45_11_974.cfg'
+# config = '..  /radar_config/xwr18xx_profile_2021_03_09T10_45_11_974.cfg'
 # config = '../radar_config/IWR1843_3d.cfg'
 # config = '../radar_config/xwr18xx_profile_2021_03_05T07_10_37_413.cfg'
 

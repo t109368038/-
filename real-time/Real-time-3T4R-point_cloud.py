@@ -34,16 +34,19 @@ config = '../radar_config/xwr68xx_profile_2021_03_23T08_12_36_405.cfg'
 # config = '../radar_config/IWR1843_3d.cfg'
 # config = '../radar_config/xwr18xx_profile_2021_03_05T07_10_37_413.cfg'
 
-set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM22', BaudRate=115200)
+set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM13', BaudRate=115200)
 
 class Realtime_sys():
-    def __init__(self):
+    def __init__(self,cam1,cam2):
         self.pd_save_status = 0
         self.pd_save = []
         self.rdi = []
         self.rai = []
         self.raw = []
+        self.camera1 = cam1
+        self.camera2 = cam2
         self.count_frame = 0
+
     def send_cmd(self, code):
         # command code list
         CODE_1 = (0x01).to_bytes(2, byteorder='little', signed=False)
@@ -108,20 +111,22 @@ class Realtime_sys():
             rd = RDIData.get()
             # img_rdi.setImage(np.rot90(rd, 1))
             #------no static remove------
-            img_rdi.setImage(np.rot90(rd, 1), levels=[150, 250])
+            # img_rdi.setImage(np.rot90(rd, 1), levels=[150, 250])
             # ------ static remove------
-            # img_rdi.setImage(np.rot90(rd, 1), levels=[40, 150])
+            img_rdi.setImage(np.rot90(rd, 1), levels=[40, 150])
             power_text.setText('Power:' + str(np.mean(rd)))
-        print(np.max(rd))
+
+        # print(np.max(rd))
+
     def RAI_update(self):
         global count, view_rai, p13d
         if not RAIData.empty():
             a = RAIData.get()
             # img_rai.setImage(np.fliplr(np.flip(a, axis=0)).T)
             # ------no static remove------
-            img_rai.setImage(np.fliplr(np.flip(a, axis=0)).T, levels=[15e4, 50.0e4])
+            # img_rai.setImage(np.fliplr(np.flip(a, axis=0)).T, levels=[15e4, 50.0e4])
             # ------ static remove ------
-            # img_rai.setImage(np.fliplr(np.flip(a, axis=0)).T, levels=[0.5e4, 9.0e4])
+            img_rai.setImage(np.fliplr(np.flip(a, axis=0)).T, levels=[0.5e2, 9.0e4])
 
 
     def PD_update(self):
@@ -134,9 +139,9 @@ class Realtime_sys():
         pos = np.transpose(pos, [1, 0])
         # self.Run_PD(pos)
         if self.pd_save_status == 1:
-            self.pd_save.append(pos)
-            self.rdi = np.append(self.rdi, RDIData.get())
-            self.rai = np.append(self.rai, RAIData.get())
+            # self.pd_save.append(pos)
+            # self.rdi = np.append(self.rdi, RDIData.get())
+            # self.rai = np.append(self.rai, RAIData.get())
             self.raw = np.append(self.raw,rawData.get())
             self.count_frame += 1
         p13d.setData(pos=pos[:,:3],color= [1,0.35,0.02,1],pxMode= True)
@@ -144,16 +149,24 @@ class Realtime_sys():
 
     def update_figure(self):
         global count,view_rai,p13d
-
+        # start = time.time()
         QtCore.QTimer.singleShot(1, self.RDI_update)
         QtCore.QTimer.singleShot(1, self.RAI_update)
         QtCore.QTimer.singleShot(1, self.PD_update)
+        # end = time.time()
+        # print(end-start)
         QtCore.QTimer.singleShot(1, self.update_figure)
         QApplication.processEvents()
         # QtCore.QTimer.singleShot(1, Run_PD())
         now = ptime.time()
         updateTime = now
-        count += 1
+        if collector.status == 1:
+            count += 1
+            self.frame_count_label.setText(str(count))
+
+        if count >= 500:
+            self.StopRecord()
+
 
 
     def openradar(self):
@@ -169,8 +182,10 @@ class Realtime_sys():
     def StartRecord(self):
         # processor.status = 1
         collector.status = 1
-        # cam1.status = 1
-        # cam2.status = 1
+        self.camera1.status = 1
+        self.camera2.status = 1
+        cam1.status = 1
+        cam2.status = 1
         self.pd_save_status = 1
         print('Start Record Time:', (time.ctime(time.time())))
         print('=======================================')
@@ -182,6 +197,7 @@ class Realtime_sys():
         # cam1.status = 0
         # cam2.status = 0
         self.pd_save_status=0
+        # self.stop_cam()
         print('Stop Record Time:', (time.ctime(time.time())))
         print('=======================================')
 
@@ -214,14 +230,21 @@ class Realtime_sys():
         # return  None
 
     def SaveData(self):
-        global savefilename, sockConfig, FPGA_address_cfg
+        global savefilename, sockConfig, FPGA_address_cfg, count
         # set_radar.StopRadar()
         # np.save("D:/kaiku_report/20210414/pd.npy", self.pd_save)
         # np.save("D:/kaiku_report/20210414/RDI.npy", self.rdi)
         # np.save("D:/kaiku_report/20210414/RAI.npy", self.rai)
-        np.save("C:/Users/user/Desktop/data/raw.npy", self.raw)
+        # np.save("C:/Users/user/Desktop/data/raw.npy", self.raw)
+        np.save("C:/Users/user/Desktop/thmouse_training_data/raw.npy", self.raw)
         self.raw = []
         print(self.count_frame)
+
+    def stop_cam(self):
+        self.camera2.close()
+        self.camera1.close()
+    def exit(self):
+        self.app.instance().exit()
 
     def plot(self):
         global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename,view_rai,p13d,nice, power_text
@@ -248,6 +271,7 @@ class Realtime_sys():
         dcabtn = ui.pushButton_DCA
         savefilename = ui.label_3
         pd_btn = ui.pd_btn
+        self.frame_count_label = ui.label_frame_count
         # savefilename = ui.textEdit
         # ---------------------------------------------------
         # lock the aspect ratio so pixels are always square
@@ -321,7 +345,7 @@ class Realtime_sys():
         stoprecordbtn.clicked.connect(self.StopRecord)
         savebtn.clicked.connect(self.SaveData)
         dcabtn.clicked.connect(self.ConnectDca)
-        exitbtn.clicked.connect(self.app.instance().exit)
+        exitbtn.clicked.connect(self.exit)
         pd_btn.btn.clicked.connect(self.Run_PD)
         # -----------------------------------------------------
         self.app.instance().exec_()
@@ -401,7 +425,6 @@ class Realtime_sys():
         view_PD.addItem(self.hand_linez2)
         view_PD.addItem(self.hand_linez3)
         view_PD.addItem(self.hand_linez4)
-
     def nine_grid_in_xy_plane(self, view_PD):
         x = 5
         x1 = 0.075 * x + 0.15 * x
@@ -447,7 +470,6 @@ class Realtime_sys():
 if __name__ == '__main__':
     print('======Real Time Data Capture Tool======')
     count = 0
-    realtime = Realtime_sys()
     # Queue for access data
     BinData = Queue()
     RDIData = Queue()
@@ -476,12 +498,15 @@ if __name__ == '__main__':
     # sockConfig = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     # sockConfig.bind(config_address)
 
-    opencamera = False
+    opencamera = True
 
-    lock = threading.Lock()
+    # lock = threading.Lock()
+    lock = None
     if opencamera:
-        cam1 = CamCapture(1, 'First', 1, lock, CAMData, cam_rawData, mode=1,mp4_path='C:/Users/user/Desktop')
-        cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1,mp4_path='C:/Users/user/Desktop')
+        cam1 = CamCapture(0, 'First', 0, lock, CAMData, cam_rawData, mode=1,mp4_path='C:/Users/user/Desktop/thmouse_training_data/')
+        cam2 = CamCapture(1, 'Second', 1, lock, CAMData2, cam_rawData2, mode=1,mp4_path='C:/Users/user/Desktop/thmouse_training_data/')
+
+    realtime = Realtime_sys(cam1,cam2)
 
     collector = UdpListener('Listener', BinData, frame_length, address, buff_size, rawData)
     processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, pointcloud, 0, "0105", status=0)
@@ -494,7 +519,7 @@ if __name__ == '__main__':
     plotIMAGE.start()
 
     # sockConfig.sendto(send_cmd('6'), FPGA_address_cfg)
-    # sockConfig.close()
+    # sockConfig.close()RuntimeError: super-class __init__() of type CamCapture was never called
     collector.join(timeout=1)
     processor.join(timeout=1)
     if opencamera:

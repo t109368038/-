@@ -334,8 +334,8 @@ class DataProcessor(th.Thread):
 
                 # (3) Doppler Processing
                 det_matrix, aoa_input = mm.dsp.doppler_processing(radar_cube, num_tx_antennas=3,
-                                                               # clutter_removal_enabled=True,
-                                                               clutter_removal_enabled=False,
+                                                               clutter_removal_enabled=True,
+                                                               # clutter_removal_enabled=False,
                                                                window_type_2d=Window.HANNING, accumulate=True)
 
                 det_matrix_vis = np.fft.fftshift(det_matrix, axes=1)

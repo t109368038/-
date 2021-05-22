@@ -2,7 +2,7 @@ import numpy as np
 import mmwave as mm
 from mmwave.dsp.utils import Window
 
-class DataProcessor():
+class DataProcessor_offline():
     def __init__(self):
         """
         :param name: str

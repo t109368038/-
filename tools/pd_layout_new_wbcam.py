@@ -66,6 +66,7 @@ class textEdit_class(QTextEdit):
 class Ui_MainWindow(object):
     def __init__(self):
         self.btn_group = QtGui.QButtonGroup()
+        self.btn_group_real = QtGui.QButtonGroup()
         self.radio_btn_group = QtGui.QButtonGroup()
 
 
@@ -77,7 +78,7 @@ class Ui_MainWindow(object):
         font.setPointSize(10)
         MainWindow.setFont(font)
         MainWindow.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
-        path1 =470;path2=510;path3=550
+        path1 =470; path2=510; path3=550
         #----------widgets setup -------------------
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
@@ -109,6 +110,18 @@ class Ui_MainWindow(object):
         self.stop_btn  = btn_class(self.centralwidget,"stop_btn",230,670,90,30,self.btn_group)
         self.next_btn  = btn_class(self.centralwidget,"next_btn",330,670,90,30,self.btn_group)
         self.pre_btn  = btn_class(self.centralwidget,"pre_btn",430,670,90,30,self.btn_group)
+
+        #----------btn setup real time part-----------        start_rt = 30  # btn pos x
+        start_rt = 30  # btn pos x
+        high_rt = 750  # btn pos y
+        self.label_realtime = label_class(self.centralwidget,"label_realtime",start_rt, high_rt-30, 300, 30)
+        self.dca1000_rtbtn = btn_class(self.centralwidget, "dca1000_rtbtn", start_rt, high_rt, 90, 30,self.btn_group_real)
+        self.sendcfg_rtbtn  = btn_class(self.centralwidget,"sendcfg_rtbtn",start_rt+100,high_rt,90,30,self.btn_group_real)
+        self.record_rtbtn  = btn_class(self.centralwidget,"record_rtbtn",start_rt+200,high_rt,90,30,self.btn_group_real)
+        self.stop_rtbtn  = btn_class(self.centralwidget,"stop_rtbtn",start_rt+300,high_rt,90,30,self.btn_group_real)
+        self.save_rtbtn  = btn_class(self.centralwidget,"save_rtbtn",start_rt+400,high_rt,90,30,self.btn_group_real)
+        self.exit_rtbtn  = btn_class(self.centralwidget,"exit_rtbtn",start_rt+500,high_rt,90,30,self.btn_group_real)
+
         # ----------rai/Beamforming rai / Cfar+static_rm-----------
         self.orgin_rai = radio_class(self.centralwidget,"orgin_rai",670,600,200,30,self.radio_btn_group,0)
         self.beam_rai = radio_class(self.centralwidget,"beam_rai",670,640,200,30,self.radio_btn_group,1)
@@ -171,4 +184,11 @@ class Ui_MainWindow(object):
         self.beam_rai.setText(_translate("MainWindow", "beamforming"))
         self.orgin_rai.setText(_translate("MainWindow", "FFT-RAI"))
         self.sure_static.setText(_translate("MainWindow", "static_clutter_rm"))
-
+        #------realtime part-------------
+        self.label_realtime.setText(_translate("MainWindow", "------ Real-time Btn set ------"))
+        self.dca1000_rtbtn.setText(_translate("MainWindow", "DCA1000"))
+        self.sendcfg_rtbtn.setText(_translate("MainWindow", "Send Cfg"))
+        self.record_rtbtn.setText(_translate("MainWindow", "record"))
+        self.stop_rtbtn.setText(_translate("MainWindow", "stop rec"))
+        self.save_rtbtn.setText(_translate("MainWindow", "save file"))
+        self.exit_rtbtn.setText(_translate("MainWindow", "Exit"))

@@ -13,7 +13,7 @@ class CamCapture():
     def __init__(self, path):
         self.path = path
         self.capture = cv2.VideoCapture(path)
-        print(self.capture.get(7))
+        print("{} frame com is {}".format(path,self.capture.get(7)))
         self.disply_width = 640
         self.display_height = 480
 

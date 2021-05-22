@@ -1,6 +1,8 @@
 from offline_process_3t4r_for_correct import DataProcessor_offline
 from tkinter import filedialog
+import socket
 import tkinter as tk
+from queue import Queue
 import pyqtgraph as pg
 import pyqtgraph.ptime as ptime
 from pyqtgraph.Qt import QtCore, QtGui, QtWidgets
@@ -13,11 +15,18 @@ import read_binfile
 import time
 from camera_offine import CamCapture
 # -----------------------------------------------
-from app_layout_2t4r_offline import Ui_MainWindow
-from R3t4r_to_point_cloud_for_realtime import plot_pd
+from real_time_pd_qthread import UdpListener, DataProcessor
+from radar_config import SerialConfig
+from ultis import  send_cmd,get_color,ConnectDca
+# -----------------------------------------------
+from pd_layout_new_wbcam import Ui_MainWindow
+
+set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM13', BaudRate=115200)
+config = '../radar_config/xwr68xx_profile_2021_03_23T08_12_36_405.cfg'
 
 class Realtime_sys():
     def __init__(self):
+    # def __init__(self,BinData,RDIData,RAIData,rawData,pointcloud):
         self.pd_save_status = 0
         self.pd_save = []
         self.rdi = []
@@ -29,11 +38,18 @@ class Realtime_sys():
         self.frame_count = 0
         self.data_proecsss = DataProcessor_offline()
         self.path = 'C:/Users/user/Desktop/thmouse_training_data/'
-    ## for test Usage
+        #----- for test Usage ----
         self.sure_select = False
-        # if self.sure_select ==False:
-        #     self.SelectFolder()
+        self.realtime_mdoe = True
         self.rai_mode =  0
+        # self.BinData = BinData
+        # self.RDIData = RDIData
+        # self.RAIData = RAIData
+        # self.rawData = rawData
+        # self.pointcloud = pointcloud
+
+
+
     def start(self):
         self.run_state = True
         self.frame_count = 0
@@ -53,58 +69,98 @@ class Realtime_sys():
         self.update_figure()
 
     def RDI_update(self):
-        rd = self.RDI
-        # img_rdi.setImage(np.rot90(rd, -1))
-        if self.Sure_staic_RM == False:
-        # ------no static remove------
-            img_rdi.setImage(np.rot90(rd, -1), levels=[150, 250])
-        # ------ static remove------
+        if self.realtime_mdoe:
+            # rd = self.RDIData.get()
+            if not RDIData.empty():
+                rd = RDIData.get()
+                if self.Sure_staic_RM == False:
+                    self.img_rdi.setImage(np.rot90(rd, 1))
+                else:
+                    self.img_rdi.setImage(np.rot90(rd, 1), levels=[40, 150])
         else:
-            img_rdi.setImage(np.rot90(rd, -1), levels=[40, 150])
+            rd = self.RDI
+        # img_rdi.setImage(np.rot90(rd, -1))
+            if self.Sure_staic_RM == False:
+            # ------no static remove------
+                self.img_rdi.setImage(np.rot90(rd, -1), levels=[150, 250])
+            # ------ static remove------
+            else:
+                self.img_rdi.setImage(np.rot90(rd, -1), levels=[40, 150])
 
     def RAI_update(self):
         global count, view_rai, p13d
-        a = self.RAI
-        e = self.RAI_ele
-        if self.Sure_staic_RM == False:
-            # ------no static remove------
-            img_rai.setImage(np.fliplr((a)).T,levels=[20e4, 50.0e4])
-            # self.img_rai_ele.setImage(np.fliplr((e)).T,levels=[20e4, 50.0e4])
-            self.img_rai_ele.setImage(np.fliplr((e)).T)
 
+        if self.realtime_mdoe:
+            if not RAIData.empty():
+                a = RAIData.get()
+                if self.Sure_staic_RM == False:
+                    self.img_rai.setImage(np.fliplr(np.flip(a, axis=0)).T)
+                    # ------no static remove------
+                    # self.img_rai.setImage(np.fliplr(np.flip(a, axis=0)).T, levels=[15e4, 50.0e4])
+                else:
+                    # ------ static remove ------
+                    self.img_rai.setImage(np.fliplr(np.flip(a, axis=0)).T, levels=[0.5e2, 9.0e4])
         else:
-            # ------ static remove------
-            img_rai.setImage(np.fliplr((a)).T, levels=[0.5e4, 2.0e4])
-            # self.img_rai_ele.setImage(np.fliplr((e)).T,levels=[0.5e4, 50.0e4])
-            self.img_rai_ele.setImage(np.fliplr((e)).T)
+            a = self.RAI
+            e = self.RAI_ele
+            if self.Sure_staic_RM == False:
+                # ------no static remove------
+                img_rai.setImage(np.fliplr((a)).T,levels=[20e4, 50.0e4])
+                # self.img_rai_ele.setImage(np.fliplr((e)).T,levels=[20e4, 50.0e4])
+                self.img_rai_ele.setImage(np.fliplr((e)).T)
+
+            else:
+                # ------ static remove------
+                img_rai.setImage(np.fliplr((a)).T, levels=[0.5e4, 2.0e4])
+                # self.img_rai_ele.setImage(np.fliplr((e)).T,levels=[0.5e4, 50.0e4])
+                self.img_rai_ele.setImage(np.fliplr((e)).T)
 
     def PD_update(self):
         global count, view_rai, p13d,nice,ax
         # --------------- plot 3d ---------------
-        pos = self.PD
-        pos = np.transpose(pos,[1,0])
-        p13d.setData(pos=pos[:,:3],color= [1,0.35,0.02,1],pxMode= True)
+        if self.realtime_mdoe:
+            if not pointcloud.empty():
+                pos = pointcloud.get()
+                pos = np.transpose(pos, [1, 0])
+                if self.pd_save_status == 1:
+                    self.raw = np.append(self.raw, self.rawData.get())
+                    self.count_frame += 1
+                p13d.setData(pos=pos[:, :3], color=[1, 0.35, 0.02, 1], pxMode=True)
+        else:
+            pos = self.PD
+            pos = np.transpose(pos,[1,0])
+            p13d.setData(pos=pos[:,:3],color= [1,0.35,0.02,1],pxMode= True)
 
     def update_figure(self):
         global count,view_rai,p13d
         self.Sure_staic_RM = self.static_rm.isChecked()
-        if self.run_state:
-            self.RDI ,self.RAI,self.RAI_ele,self.PD = self.data_proecsss.run_proecss(self.rawData[self.frame_count],\
-                                                            self.rai_mode,self.Sure_staic_RM,self.chirp)
-            self.RDI_update()
-            self.RAI_update()
-            self.PD_update()
-            time.sleep(0.05)
-            if self.sure_next:
-                self.frame_count +=1
-                QtCore.QTimer.singleShot(1, self.update_figure)
-                QApplication.processEvents()
-            if self.sure_image:
-                self.image_label1.setPixmap((self.th_cam1.get_frame()))
-                self.image_label2.setPixmap((self.th_cam2.get_frame()))
-        else :
-            pass
-        # print(self.frame_count)
+
+        if self.realtime_mdoe:
+            start = time.time()
+            QtCore.QTimer.singleShot(1, self.RDI_update)
+            QtCore.QTimer.singleShot(1, self.RAI_update)
+            QtCore.QTimer.singleShot(1, self.PD_update)
+            end = time.time()
+            print(end - start)
+            QtCore.QTimer.singleShot(1, self.update_figure)
+            QApplication.processEvents()
+        else:
+            if self.run_state:
+                self.RDI ,self.RAI,self.RAI_ele,self.PD = self.data_proecsss.run_proecss(self.rawData[self.frame_count],\
+                                                                self.rai_mode,self.Sure_staic_RM,self.chirp)
+                self.RDI_update()
+                self.RAI_update()
+                self.PD_update()
+                time.sleep(0.05)
+                if self.sure_next:
+                    self.frame_count +=1
+                    QtCore.QTimer.singleShot(1, self.update_figure)
+                    QApplication.processEvents()
+                if self.sure_image:
+                    self.image_label1.setPixmap((self.th_cam1.get_frame()))
+                    self.image_label2.setPixmap((self.th_cam2.get_frame()))
+            else :
+                pass
 
     def pre_frame(self):
         if self.frame_count >0:
@@ -197,6 +253,40 @@ class Realtime_sys():
 
         self.enable_btns(True)
 
+    def StartRecord(self):
+        # processor.status = 1
+        # collector.status = 1
+        self.pd_save_status = 1
+        print('Start Record Time:', (time.ctime(time.time())))
+        print('=======================================')
+
+    def ConnectDca1000(self):
+        # dca1000  = ConnectDca()
+        # dca1000.start()
+        global sockConfig, FPGA_address_cfg
+        print('Connect to DCA1000')
+        print('=======================================')
+        config_address = ('192.168.33.30', 4096)
+        FPGA_address_cfg = ('192.168.33.180', 4096)
+        cmd_order = ['9', 'E', '3', 'B', '5', '6']
+        sockConfig = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sockConfig.bind(config_address)
+        for k in range(5):
+            # Send the command
+            sockConfig.sendto(send_cmd(cmd_order[k]), FPGA_address_cfg)
+            time.sleep(0.1)
+            # Request data back on the config port
+            msg, server = sockConfig.recvfrom(2048)
+            # print('receive command:', msg.hex())
+
+    def openradar(self):
+        set_radar.StopRadar()
+        set_radar.SendConfig(config)
+        print('======================================')
+        self.update_figure()
+
+    def exit(self):
+        self.app.instance().exit()
 
     def plot(self):
         global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename,view_rai,p13d,nice
@@ -206,7 +296,6 @@ class Realtime_sys():
         MainWindow.show()
         ui = Ui_MainWindow()
         ui.setupUi(MainWindow)
-
         self.browse_btn = ui.browse_btn
         self.browse_text = ui.textEdit
         self.browse_text_cam1 = ui.textEdit_cam1
@@ -224,7 +313,17 @@ class Realtime_sys():
         self.cam2_btn =  ui.browse_cam2_btn
         self.image_label1 =ui.image_label1
         self.image_label2 =ui.image_label2
-        # #----------------- btn clicked connet -----------------
+        #----------------- realtime btn clicked connet -----------------
+        self.start_dca_rtbtn = ui.dca1000_rtbtn
+        self.send_cfg_rtbtn = ui.sendcfg_rtbtn
+        self.record_rtbtn = ui.record_rtbtn
+        self.stop_rtbtn = ui.stop_rtbtn
+        self.save_rtbtn = ui.save_rtbtn
+        self.exit_rtbtn = ui.exit_rtbtn
+        self.start_dca_rtbtn.clicked.connect(self.ConnectDca1000)
+        self.send_cfg_rtbtn.clicked.connect(self.openradar)
+        self.exit_rtbtn.clicked.connect(self.exit)
+        #----------------- btn clicked connet -----------------
         self.browse_btn.clicked.connect(self.SelectFolder)
         self.cam1_btn.clicked.connect(self.SelectFolder_cam1)
         self.cam2_btn.clicked.connect(self.SelectFolder_cam2)
@@ -242,8 +341,8 @@ class Realtime_sys():
         # lock the aspect ratio so pixels are always square
         self.view_rdi.setAspectLocked(True)
         self.view_rai.setAspectLocked(True)
-        img_rdi = pg.ImageItem(border='w')
-        img_rai = pg.ImageItem(border='w')
+        self.img_rdi = pg.ImageItem(border='w')
+        self.img_rai = pg.ImageItem(border='w')
         self.img_rai_ele = pg.ImageItem(border='w')
         img_cam = pg.ImageItem(border='w')
         #-----------------
@@ -267,54 +366,31 @@ class Realtime_sys():
         view_PD.addItem(coord)
         view_PD.addItem(origin)
 
-        print(view_PD.cameraPosition())
         view_PD.orbit(45,6)
         view_PD.pan(1,1,1,relative=1)
-
         self.lineup(view_PD)
         self.enable_btns(False)
-
         # ang_cuv = pg.PlotDataItem(tmp_data, pen='r')
         # Colormap
         position = np.arange(64)
         position = position / 64
         position[0] = 0
-
         position = np.flip(position)
-        colors = [[62, 38, 168, 255], [63, 42, 180, 255], [65, 46, 191, 255], [67, 50, 202, 255], [69, 55, 213, 255],
-                  [70, 60, 222, 255], [71, 65, 229, 255], [70, 71, 233, 255], [70, 77, 236, 255], [69, 82, 240, 255],
-                  [68, 88, 243, 255],
-                  [68, 94, 247, 255], [67, 99, 250, 255], [66, 105, 254, 255], [62, 111, 254, 255], [56, 117, 254, 255],
-                  [50, 123, 252, 255],
-                  [47, 129, 250, 255], [46, 135, 246, 255], [45, 140, 243, 255], [43, 146, 238, 255], [39, 150, 235, 255],
-                  [37, 155, 232, 255],
-                  [35, 160, 229, 255], [31, 164, 225, 255], [28, 129, 222, 255], [24, 173, 219, 255], [17, 177, 214, 255],
-                  [7, 181, 208, 255],
-                  [1, 184, 202, 255], [2, 186, 195, 255], [11, 189, 188, 255], [24, 191, 182, 255], [36, 193, 174, 255],
-                  [44, 195, 167, 255],
-                  [49, 198, 159, 255], [55, 200, 151, 255], [63, 202, 142, 255], [74, 203, 132, 255], [88, 202, 121, 255],
-                  [102, 202, 111, 255],
-                  [116, 201, 100, 255], [130, 200, 89, 255], [144, 200, 78, 255], [157, 199, 68, 255], [171, 199, 57, 255],
-                  [185, 196, 49, 255],
-                  [197, 194, 42, 255], [209, 191, 39, 255], [220, 189, 41, 255], [230, 187, 45, 255], [239, 186, 53, 255],
-                  [248, 186, 61, 255],
-                  [254, 189, 60, 255], [252, 196, 57, 255], [251, 202, 53, 255], [249, 208, 50, 255], [248, 214, 46, 255],
-                  [246, 220, 43, 255],
-                  [245, 227, 39, 255], [246, 233, 35, 255], [246, 239, 31, 255], [247, 245, 27, 255], [249, 251, 20, 255]]
+        colors = get_color()
         colors = np.flip(colors, axis=0)
         color_map = pg.ColorMap(position, colors)
         lookup_table = color_map.getLookupTable(0.0, 1.0, 256)
-        img_rdi.setLookupTable(lookup_table)
-        img_rai.setLookupTable(lookup_table)
+        self.img_rdi.setLookupTable(lookup_table)
+        self.img_rai.setLookupTable(lookup_table)
         self.img_rai_ele.setLookupTable(lookup_table)
-        self.view_rdi.addItem(img_rdi)
-        self.view_rai.addItem(img_rai)
+        self.view_rdi.addItem(self.img_rdi)
+        self.view_rai.addItem(self.img_rai)
         self.view_rai.addItem(self.img_rai_ele)
         self.view_rdi.setRange(QtCore.QRectF(0, 0, 30, 70))
         self.view_rai.setRange(QtCore.QRectF(10, 0, 160, 80))
         updateTime = ptime.time()
         self.app.instance().exec_()
-        # print('=======================================')
+
     def lineup(self,view_PD):
         ###---------------------------------------------
         self.hand = gl.GLScatterPlotItem(pos=np.array([[0, 0, 0]]), color=[0, 255, 0, 255], pxMode=True)
@@ -367,10 +443,39 @@ if __name__ == '__main__':
     print('======Real Time Data Capture Tool======')
     count = 0
     realtime = Realtime_sys()
+
+    # -------------------------------------------
+    BinData = Queue()
+    RDIData = Queue()
+    RAIData = Queue()
+    rawData = Queue()
+    pointcloud = Queue()
+    # Radar config
+    adc_sample = 64
+    chirp = 16
+    tx_num = 3
+    rx_num = 4
+    radar_config = [adc_sample, chirp, tx_num, rx_num]
+    frame_length = adc_sample * chirp * tx_num * rx_num * 2
+    # Host setting
+    address = ('192.168.33.30', 4098)
+    buff_size = 2097152
+    # call class
+    collector = UdpListener('Listener', BinData, frame_length, address, buff_size, rawData)
+    processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, pointcloud, 0,
+                              "0105", status=0)
+    collector.start()
+    processor.start()
+    # -------------------------------------------
+    # realtime = Realtime_sys(BinData,RDIData,RAIData,rawData,pointcloud)
     lock = threading.Lock()
 
+
+    # -------------------------------------------
     plotIMAGE = threading.Thread(target=realtime.plot())
     plotIMAGE.start()
-
+    collector.join(timeout=1)
+    processor.join(timeout=1)
     print("Program Close")
+    set_radar.StopRadar()
     sys.exit()
