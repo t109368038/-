@@ -4,10 +4,19 @@ import socket
 import DSP_2t4r
 import mmwave as mm
 from mmwave.dsp.utils import Window
-from PyQt5.QtCore import QThread
+from PyQt5.QtCore import QThread, pyqtSignal
 
-class UdpListener(th.Thread):
-    def __init__(self, name, bin_data, data_frame_length, data_address, buff_size, save_data):
+
+
+# class UdpListener(th.Thread):
+#     def __init__(self, name, bin_data, data_frame_length, data_address, buff_size, save_data):
+class UdpListener(QThread):
+    bindata_signal = pyqtSignal(list)
+    rawdata_signal = pyqtSignal(list)
+    def __init__(self, name, data_frame_length, data_address, buff_size,bindata,rawdata):
+
+        super(UdpListener, self).__init__()
+        # th.Thread.__init__(self, name=name)
         """
         :param name: str
                         Object name
@@ -20,13 +29,14 @@ class UdpListener(th.Thread):
         :param buff_size: int
                         Socket buffer size
         """
-        th.Thread.__init__(self, name=name)
-        self.bin_data = bin_data
+        self.bin_data = []
         self.frame_length = data_frame_length
         self.data_address = data_address
         self.buff_size = buff_size
-        self.save_data = save_data
+        self.save_data = []
         self.status = 0
+        self.bindata = bindata
+        self.rawdata = rawdata
 
     def run(self):
         # convert bytes to data type int16
@@ -49,21 +59,23 @@ class UdpListener(th.Thread):
             # while np_data length exceeds frame length, do following
             if len(np_data) >= self.frame_length:
                 count_frame += 1
-                # print(self.frame_length)
-                # print("Frame No.", count_frame)
-                # put one frame data into bin data array
                 if self.status == 1:
-                    # print(self.status)
-
-                    # print("Frame No.", count_frame)
-                    self.save_data.put(np_data[0:self.frame_length])
-                self.bin_data.put(np_data[0:self.frame_length])
+                    self.rawdata.put(np_data[0:self.frame_length])
+                    # self.rawdata_signal.emit(np_data[0:self.frame_length])
+                # print(np_data[0:self.frame_length])
+                self.bindata.put(np_data[0:self.frame_length])
                 # remove one frame length data from array
                 np_data = np_data[self.frame_length:]
 
 
-class DataProcessor(th.Thread):
-    def __init__(self, name, config, bin_queue, rdi_queue, rai_queue, pointcloud_queue, raw_queue=None, file_name=0, status=0):
+class DataProcessor(QThread):
+# class DataProcessor(th.Thread):
+    data_signal = pyqtSignal(np.ndarray,np.ndarray,np.ndarray)
+
+    def __init__(self, name, config, bin, file_name=0, status=0):
+        super(DataProcessor, self).__init__()
+        # th.Thread.__init__(self, name=name)
+
         """
         :param name: str
                         Object name
@@ -80,16 +92,10 @@ class DataProcessor(th.Thread):
         :param rai_queue: queue object
                         A queue for store RDI
         """
-        th.Thread.__init__(self, name=name)
         self.adc_sample = config[0]
         self.chirp_num = config[1]
         self.tx_num = config[2]
         self.rx_num = config[3]
-        self.bin_queue = bin_queue
-        self.rdi_queue = rdi_queue
-        self.rai_queue = rai_queue
-        self.pd_queue = pointcloud_queue
-        self.raw_queue = raw_queue
         self.filename = file_name
         self.status = status
         # self.weight_matrix = np.zeros([181, 8], dtype=complex)
@@ -97,6 +103,8 @@ class DataProcessor(th.Thread):
         self.weight_matrix1 = np.zeros([181, 2], dtype=complex)
         self.out_matrix = np.zeros([8192, 181], dtype=complex)
         self.out_matrix1 = np.zeros([8192, 181], dtype=complex)
+        self.bindata = bin
+        self.Sure_staic_RM = False
         Fc = 60
         count = 0
         lambda_start = 3e8 / Fc
@@ -108,25 +116,19 @@ class DataProcessor(th.Thread):
             self.weight_matrix[count, :] = np.exp(-1j * 2 * np.pi * beamforming_factor)
             self.weight_matrix1[count, :] = np.exp(-1j * 2 * np.pi * beamforming_factor1)
             count += 1
-    def print_shape(self,x):
-        print(np.shape(x))
+
+
 
     def run(self):
-        frame_count = 0
         while True:
-            '''
-            mode 0/1 
-            mode 1 --> RDI RAI build by ourself 
-            mode 2 --> RDI RAI build by openradar method 
-            mode 3 
-            '''
 
+            frame_count = 0
 
             range_resolution, bandwidth = mm.dsp.range_resolution(66,2000,121.134)
             doppler_resolution = mm.dsp.doppler_resolution(bandwidth, 60, 33.02, 9.43, 16, 3)
 
 
-            data = self.bin_queue.get()
+            data = self.bindata.get()
             data = np.reshape(data, [-1, 4])
             data = data[:, 0:2:] + 1j * data[:, 2::]
             raw_data = np.reshape(data, [self.chirp_num * self.tx_num, -1, self.adc_sample])
@@ -137,7 +139,8 @@ class DataProcessor(th.Thread):
 
             # (3) Doppler Processing
             det_matrix, aoa_input = mm.dsp.doppler_processing(radar_cube, num_tx_antennas=3,
-                                                           clutter_removal_enabled=True,
+                                                           clutter_removal_enabled=self.Sure_staic_RM,
+                                                           # clutter_removal_enabled=True,
                                                            # clutter_removal_enabled=False,
                                                            window_type_2d=Window.HANNING, accumulate=True)
 
@@ -191,10 +194,7 @@ class DataProcessor(th.Thread):
 
             det_doppler_mask = (det_matrix > thresholdDoppler)
             det_range_mask = (det_matrix > thresholdRange)
-            self.rdi_queue.put(np.flip(det_matrix_vis))
 
-            self.rai_queue.put(np.flip(azimuth_map.sum(0)))
-            # self.rai_queue.put(np.flip(elevation_map.sum(0))/4)
 
             # Get indices of detected peaks
             full_mask = (det_doppler_mask & det_range_mask)
@@ -233,5 +233,10 @@ class DataProcessor(th.Thread):
                                                                                    detObj2D['dopplerIdx'],
                                                                                    range_resolution,
                                                                                    method='Bartlett')
-            self.pd_queue.put(xyzVec)
 
+            # self.rdi_queue.put(np.flip(det_matrix_vis))
+            # self.rai_queue.put(np.flip(azimuth_map.sum(0)))
+            # # self.rai_queue.put(np.flip(elevation_map.sum(0))/4)
+            # self.pd_queue.put(xyzVec)
+
+            self.data_signal.emit(np.flip(det_matrix_vis), np.flip(azimuth_map.sum(0)), xyzVec)

@@ -141,7 +141,7 @@ class Realtime_sys():
             self.file_path_cam1 = filedialog.askopenfilename(parent=root, initialdir=self.path)
             self.browse_text_cam1.setText(self.file_path_cam1)
         else:
-            self.file_path_cam1 = self.path + 'output0.mp4'
+            self.file_path_cam1 = self.path + 'vedio1.mp4'
             self.browse_text_cam1.setText(self.file_path_cam1)
 
         return self.file_path_cam1
@@ -154,7 +154,7 @@ class Realtime_sys():
             self.file_path_cam2 = filedialog.askopenfilename(parent=root, initialdir=self.path)
             self.browse_text_cam2.setText(self.file_path_cam2)
         else:
-            self.file_path_cam2 = self.path + 'output1.mp4'
+            self.file_path_cam2 = self.path + 'vedio2.mp4'
             self.browse_text_cam2.setText(self.file_path_cam2)
         return self.file_path_cam2
 

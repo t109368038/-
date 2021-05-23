@@ -32,9 +32,7 @@ class CamCapture(th.Thread):
         sz = (int(self.cam.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.cam.get(cv2.CAP_PROP_FRAME_HEIGHT)))
         self.fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         self.vout = cv2.VideoWriter()
-        self.vout.open(self.save_mp4_path + 'output'+str(self.counter)+'.mp4', self.fourcc, 20, sz, True)
-
-        self.cam.set(cv2.CAP_PROP_FPS, 20)
+        self.vout.open(self.save_mp4_path + 'output'+str(self.counter)+'.mp4', self.fourcc, 30, sz, True)
         fps = int(self.cam.get(5))
         print('FPS:{}'.format(fps))
         ret, frame = self.cam.read()
