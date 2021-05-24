@@ -27,6 +27,7 @@ class Realtime_sys():
         self.sure_next = True
         self.sure_image = True
         self.frame_count = 0
+        self.fps_count =  0
         self.data_proecsss = DataProcessor_offline()
         self.path = 'C:/Users/user/Desktop/thmouse_training_data/'
     ## for test Usage
@@ -68,7 +69,8 @@ class Realtime_sys():
         e = self.RAI_ele
         if self.Sure_staic_RM == False:
             # ------no static remove------
-            img_rai.setImage(np.fliplr((a)).T,levels=[20e4, 50.0e4])
+            # img_rai.setImage(np.fliplr((a)).T,levels=[20e4, 50.0e4])
+            img_rai.setImage(np.fliplr((a)).T,)
             # self.img_rai_ele.setImage(np.fliplr((e)).T,levels=[20e4, 50.0e4])
             self.img_rai_ele.setImage(np.fliplr((e)).T)
 
@@ -88,9 +90,12 @@ class Realtime_sys():
     def update_figure(self):
         global count,view_rai,p13d
         self.Sure_staic_RM = self.static_rm.isChecked()
+        # if self.fps_count %3
         if self.run_state:
             self.RDI ,self.RAI,self.RAI_ele,self.PD = self.data_proecsss.run_proecss(self.rawData[self.frame_count],\
                                                             self.rai_mode,self.Sure_staic_RM,self.chirp)
+            self.updatecam()
+            self.updatecam()
             self.RDI_update()
             self.RAI_update()
             self.PD_update()
@@ -99,12 +104,16 @@ class Realtime_sys():
                 self.frame_count +=1
                 QtCore.QTimer.singleShot(1, self.update_figure)
                 QApplication.processEvents()
-            if self.sure_image:
-                self.image_label1.setPixmap((self.th_cam1.get_frame()))
-                self.image_label2.setPixmap((self.th_cam2.get_frame()))
+            # if self.sure_image:
+            #     self.image_label1.setPixmap((self.th_cam1.get_frame()))
+                # self.image_label2.setPixmap((self.th_cam2.get_frame()))
         else :
             pass
         # print(self.frame_count)
+
+    def updatecam(self):
+        self.image_label1.setPixmap((self.th_cam1.get_frame()))
+        self.image_label2.setPixmap((self.th_cam2.get_frame()))
 
     def pre_frame(self):
         if self.frame_count >0:

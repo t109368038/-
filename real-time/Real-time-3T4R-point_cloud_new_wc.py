@@ -41,15 +41,15 @@ class Realtime_sys():
         # Host setting
         address = ('192.168.33.30', 4098)
         buff_size = 2097152
-        save_frame_len = 120
+        self.save_frame_len = 120
         # call class
         self.bindata = Queue()
         self.rawdata = Queue()
         self.collector = UdpListener('Listener', frame_length, address, buff_size,self.bindata,self.rawdata)
         # self.collector.rawdata_signal.connect(self.append_rawdata)
-        self.cam1_thread = RTSPVideoWriterObject(0, "vedio1", save_frame_len=save_frame_len)
-        self.cam2_thread = RTSPVideoWriterObject(1, "vedio2", save_frame_len=save_frame_len)
-        self.cam1_thread.change_pixmap_signal.connect(self.update_cam1)
+        self.cam1_thread = RTSPVideoWriterObject(0, "vedio1", save_frame_len=self.save_frame_len)
+        self.cam2_thread = RTSPVideoWriterObject(1, "vedio2", save_frame_len=self.save_frame_len)
+        self.cam1_thread.change_pixmap_signal.connect(self.update_cam1) # Qthread link slot
         self.cam2_thread.change_pixmap_signal.connect(self.update_cam2)
         self.processor = DataProcessor('Processor', self.radar_config, self.bindata, "0105", status=0 )
         self.processor.data_signal.connect(self.Qthreadupdate_fig)
@@ -73,24 +73,38 @@ class Realtime_sys():
         self.rai_mode =  0
         self.save_frame_len = 120
 
+    def restart(self):
+        self.cam1_thread.restart_videowriter()
+        self.cam2_thread.restart_videowriter()
+
+
     def append_rawdata(self,rawdata):
         self.raw.append(rawdata)
         # print(np.shape(self.raw))
 
     def Qthreadupdate_fig(self,rdi,rai,pd):
         self.processor.Sure_staic_RM = self.static_rm.isChecked()
+
         if self.pd_save_status == 1  :
             self.raw.append(self.rawdata.get())
             self.frame_count += 1
             if self.frame_count>=120:
                 self.StopRecord()
                 self.SaveData()
+        # if not rai.empty():
         self.img_rdi.setImage(np.rot90(rdi, 1))
         # if not rai.empty():
         self.img_rai.setImage(np.fliplr(np.flip(rai, axis=0)).T)
         # if not pd.empty():
         pos = np.transpose(pd, [1, 0])
         p13d.setData(pos=pos[:, :3], color=[1, 0.35, 0.02, 1], pxMode=True)
+
+    def save_process(self):
+        self.raw = np.append(self.raw, self.rawData.get())
+        self.frame_count += 1
+        if self.frame_count >= self.save_frame_len:
+            self.StopRecord()
+
 
     def update_cam1(self,img):
         self.image_label1.setPixmap(img)
@@ -150,12 +164,6 @@ class Realtime_sys():
                 p13d.setData(pos=pos[:, :3], color=[1, 0.35, 0.02, 1], pxMode=True)
                 if self.pd_save_status == 1:
                     self.save_process()
-
-    def save_process(self):
-        self.raw = np.append(self.raw, self.rawData.get())
-        self.frame_count += 1
-        if self.frame_count >= self.save_frame_len :
-            self.StopRecord()
 
     def update_figure(self):
         global count,view_rai,p13d
@@ -291,8 +299,8 @@ class Realtime_sys():
         self.pd_save_status = 0
         self.cam1_thread.record = False
         self.cam2_thread.record = False
-        self.cam1_thread.close_webcam()
-        self.cam2_thread.close_webcam()
+        self.cam1_thread.release_video()
+        self.cam2_thread.release_video()
         print('Stop Record Time:', (time.ctime(time.time())))
         print('=======================================')
 
@@ -327,12 +335,14 @@ class Realtime_sys():
 
 
     def exit(self):
+        self.cam1_thread.quit()
+        self.cam2_thread.quit()
         self.app.instance().exit()
 
     def SaveData(self):
         np.save("C:/Users/user/Desktop/thmouse_training_data/raw.npy", self.raw)
         self.raw = []
-
+        self.frame_count = 0
 
     def plot(self):
         global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename,view_rai,p13d,nice
@@ -366,11 +376,13 @@ class Realtime_sys():
         self.stop_rtbtn = ui.stop_rtbtn
         self.save_rtbtn = ui.save_rtbtn
         self.exit_rtbtn = ui.exit_rtbtn
+        self.restart_rtbtn = ui.restart_rtbtn
         self.start_dca_rtbtn.clicked.connect(self.ConnectDca1000)
         self.send_cfg_rtbtn.clicked.connect(self.openradar)
         self.record_rtbtn.clicked.connect(self.StartRecord)
         self.exit_rtbtn.clicked.connect(self.exit)
         self.save_rtbtn.clicked.connect(self.SaveData)
+        self.restart_rtbtn.clicked.connect(self.restart)
         #----------------- btn clicked connet -----------------
         self.browse_btn.clicked.connect(self.SelectFolder)
         self.cam1_btn.clicked.connect(self.SelectFolder_cam1)

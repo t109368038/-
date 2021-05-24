@@ -25,11 +25,10 @@ class RTSPVideoWriterObject(QThread):
         # Default resolutions of the frame are obtained (system dependent)
         self.frame_width = int(self.capture.get(3))
         self.frame_height = int(self.capture.get(4))
-
         # Set up codec and output video settings
         self.codec = cv2.VideoWriter_fourcc(*'mp4v')
-        mp4_path = 'C:/Users/user/Desktop/thmouse_training_data/'+ filename +".mp4"
-        self.output_video = cv2.VideoWriter(mp4_path, self.codec, 30, (self.frame_width, self.frame_height))
+        self.mp4_path = 'C:/Users/user/Desktop/thmouse_training_data/'+ filename +".mp4"
+        self.output_video = cv2.VideoWriter(self.mp4_path, self.codec, 30, (self.frame_width, self.frame_height))
         self.readframe = 0
         self.fps_count = 0
         self.start_time = time.time()
@@ -59,9 +58,9 @@ class RTSPVideoWriterObject(QThread):
             if self.capture.isOpened():
                 (self.status, self.frame) = self.capture.read()
                 # print("cam1{} gogo ".format(self.wc_number))
-                img = self.convert_cv_qt(self.frame)
-                self.change_pixmap_signal.emit(img)
                 if self.record:
+                    img = self.convert_cv_qt(self.frame)
+                    self.change_pixmap_signal.emit(img)
                     print("frame:{}".format(self.readframe))
                     self.save_frame()
                     self.readframe += 1
@@ -80,33 +79,19 @@ class RTSPVideoWriterObject(QThread):
     def state_change(self):
         self.record = not self.record
 
-    def close_webcam(self):
+    def release_video(self):
         #close the webcam process
-        print("closewebcam")
-        self.end = time.time()
-        self.capture.release()
         self.output_video.release()
-        cv2.destroyAllWindows()
-        # exit(1)
+        # self.output_video = cv2.VideoWriter(self.mp4_path, self.codec, 30, (self.frame_width, self.frame_height))
 
     def get_fsp(self):
         if self.fps_count != 0 :
             fps =  self.fps_count/(time.time() - self.start_time)
             print("Time cam{} FPS is  : {} frame/perseconds".format(self.wc_number,fps))
 
-# class UpdateFig(QThread):
-#     def __init__(self,parent):
-#         super(UpdateFig, self).__init__(parent)
-#         self.parent = parent
-#     def run(self):
-#         while True:
-#             if self.parent.capture.isOpened():
-#                 (self.status, self.frame) = self.parent.capture.read()
-#                 if self.record:
-#                     print("frame:{}".format(self.parent.readframe))
-#                     self.parent.save_frame()
-#                     self.parent.readframe += 1
-#                 self.parent.fps_count += 1
+    def restart_videowriter(self):
+        self.output_video = cv2.VideoWriter(self.mp4_path, self.codec, 30, (self.frame_width, self.frame_height))
+        self.readframe = 0
 
 if __name__ == '__main__':
     rtsp_stream_link = 0

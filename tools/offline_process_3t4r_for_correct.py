@@ -209,7 +209,8 @@ class DataProcessor_offline():
             # return  det_matrix_vis,azimuth_map.sum(0),xyzVec
 
 
-            return  det_matrix_vis,azimuth_map.sum(0)[6:9,:],elevation_map.sum(0)[6:9,:].T,xyzVec
+            # return  det_matrix_vis,azimuth_map.sum(0)[6:9,:],elevation_map.sum(0)[6:9,:].T,xyzVec
+            return  det_matrix_vis,azimuth_map.sum(0),np.zeros([1,1]),xyzVec
 
         output_a_angles.append((180 / np.pi) * np.arcsin(np.sin(a_angle) * np.cos(e_angle)))
 
