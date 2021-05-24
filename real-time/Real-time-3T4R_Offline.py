@@ -35,6 +35,7 @@ class Realtime_sys():
         # if self.sure_select ==False:
         #     self.SelectFolder()
         self.rai_mode =  0
+
     def start(self):
         self.run_state = True
         self.frame_count = 0
@@ -90,26 +91,30 @@ class Realtime_sys():
     def update_figure(self):
         global count,view_rai,p13d
         self.Sure_staic_RM = self.static_rm.isChecked()
-        # if self.fps_count %3
-        if self.run_state:
-            self.RDI ,self.RAI,self.RAI_ele,self.PD = self.data_proecsss.run_proecss(self.rawData[self.frame_count],\
-                                                            self.rai_mode,self.Sure_staic_RM,self.chirp)
-            self.updatecam()
-            self.updatecam()
-            self.RDI_update()
-            self.RAI_update()
-            self.PD_update()
-            time.sleep(0.05)
-            if self.sure_next:
-                self.frame_count +=1
-                QtCore.QTimer.singleShot(1, self.update_figure)
-                QApplication.processEvents()
-            # if self.sure_image:
-            #     self.image_label1.setPixmap((self.th_cam1.get_frame()))
-                # self.image_label2.setPixmap((self.th_cam2.get_frame()))
-        else :
-            pass
-        # print(self.frame_count)
+        if self.fps_count % 3 ==2 :
+            self.fps_count += 1
+            self.th_cam1.get_frame()
+            self.th_cam2.get_frame()
+            QtCore.QTimer.singleShot(1, self.update_figure)
+        else:
+            if self.run_state:
+                self.RDI ,self.RAI,self.RAI_ele,self.PD = self.data_proecsss.run_proecss(self.rawData[self.frame_count],\
+                                                                self.rai_mode,self.Sure_staic_RM,self.chirp)
+                self.updatecam()
+                self.updatecam()
+                self.RDI_update()
+                self.RAI_update()
+                self.PD_update()
+                time.sleep(0.05)
+                if self.sure_next:
+                    self.frame_count +=1
+                    self.fps_count += 1
+                    QtCore.QTimer.singleShot(1, self.update_figure)
+                    QApplication.processEvents()
+                if self.sure_image:
+                    self.image_label1.setPixmap((self.th_cam1.get_frame()))
+                    self.image_label2.setPixmap((self.th_cam2.get_frame()))
+
 
     def updatecam(self):
         self.image_label1.setPixmap((self.th_cam1.get_frame()))
@@ -321,6 +326,9 @@ class Realtime_sys():
         self.view_rai.addItem(self.img_rai_ele)
         self.view_rdi.setRange(QtCore.QRectF(0, 0, 30, 70))
         self.view_rai.setRange(QtCore.QRectF(10, 0, 160, 80))
+        self.SelectFolder()
+        self.SelectFolder_cam2()
+        self.SelectFolder_cam1()
         updateTime = ptime.time()
         self.app.instance().exec_()
         # print('=======================================')

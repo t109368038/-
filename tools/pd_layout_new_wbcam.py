@@ -122,7 +122,8 @@ class Ui_MainWindow(object):
         self.save_rtbtn  = btn_class(self.centralwidget,"save_rtbtn",start_rt+400,high_rt,90,30,self.btn_group_real)
         self.exit_rtbtn  = btn_class(self.centralwidget,"exit_rtbtn",start_rt+500,high_rt,90,30,self.btn_group_real)
         self.restart_rtbtn  = btn_class(self.centralwidget,"restart_rtbtn",start_rt+600,high_rt,90,30,self.btn_group_real)
-
+        self.restart_radar_rtbtn  = btn_class(self.centralwidget,"restart_rtbtn",start_rt+700,high_rt,90,30,self.btn_group_real)
+        # self.label_frame =  label_class()
         # ----------rai/Beamforming rai / Cfar+static_rm-----------
         self.orgin_rai = radio_class(self.centralwidget,"orgin_rai",670,600,200,30,self.radio_btn_group,0)
         self.beam_rai = radio_class(self.centralwidget,"beam_rai",670,640,200,30,self.radio_btn_group,1)
@@ -194,3 +195,4 @@ class Ui_MainWindow(object):
         self.save_rtbtn.setText(_translate("MainWindow", "save file"))
         self.exit_rtbtn.setText(_translate("MainWindow", "Exit"))
         self.restart_rtbtn.setText(_translate("MainWindow", "restart"))
+        self.restart_radar_rtbtn.setText(_translate("MainWindow", "restart_radar"))

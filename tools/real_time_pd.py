@@ -42,10 +42,26 @@ class UdpListener(th.Thread):
         print("Waiting For The Data Stream")
         print('=======================================')
         # main loop
+        previous_head = 0
         while True:
             data, addr = data_socket.recvfrom(self.buff_size)
-            data = data[10:]
-            np_data.extend(np.frombuffer(data, dtype=dt))
+            # data = data[10:]
+            # print('head', data[3] + data[2] + data[1] + data[0])
+            current_head = data[3] + data[2] + data[1] + data[0]
+            # print(type(current_head - previous_head))
+            # if (current_head - previous_head) == 1:
+            #     previous_head = current_head
+            # else:
+            #     print('head', current_head)
+            #     previous_head = current_head
+            if (current_head - previous_head) != 1 and (current_head - previous_head) != -254:
+                print('difference:', current_head - previous_head)
+            previous_head = current_head
+
+            data = np.frombuffer(data, dtype=dt)
+            data = data[5:]
+
+            np_data.extend(data)
             # while np_data length exceeds frame length, do following
             if len(np_data) >= self.frame_length:
                 count_frame += 1
