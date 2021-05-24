@@ -92,7 +92,7 @@ out_path = 'E:/NTUT-master/Result/Original Data(Yen Li)/Training-Result/MATLAB-2
 if not os.path.isdir(out_path):
     os.makedirs(out_path)
 
-result_times = 1
+result_times = 6
 epochs = 40
 sense = [0, 1]
 gesture = 12
@@ -210,7 +210,7 @@ model.compile(optimizer=sgd,
 model.summary()
 # model ==============================
 history = model.fit(x_train_s0, y_train_s0,
-                    batch_size=batch_sizes, epochs=epochs, shuffle=False, verbose=1,
+                    batch_size=batch_sizes, epochs=epochs, shuffle=True, verbose=1,
                     callbacks=[scheduler],
                     validation_data=(x_test_s0, y_test_s0)
                     )
