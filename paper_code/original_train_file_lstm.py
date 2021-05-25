@@ -32,8 +32,8 @@ from sklearn import manifold
 #            print(tf.add_n(c))
 
 
-# h5_dir = '/home/lab210/MattYen_workspace/gest_August/cross-scene/3t4rRDI/'
-h5_dir = 'C:/data2/h5_to_npy_3t4r/RDI/'
+# h5_dir = '/home/lab210/MattYen_workspace/gest_August/cross-scene/3t4rRAI/'
+h5_dir = 'C:/data2/h5_to_npy_3t4r/RAI/'
 
 
 x_train = np.load(h5_dir + 'x_train.npy')
@@ -123,8 +123,12 @@ del x_train_mean_perChannel, x_train_std
 del temp, temp_2, temp_3
 
 
-x_train_new = x_train_new[:, :, :, :, 0:4]
-x_test_new = x_test_new[:, :, :, :, 0:4]
+x_train_new = np.reshape(x_train_new[:, :, :, :, 0], [x_train_new.shape[0], x_train_new.shape[1],
+                                                      x_train_new.shape[2], x_train_new.shape[3],
+                                                      1])
+x_test_new = np.reshape(x_test_new[:, :, :, :, 0], [x_test_new.shape[0], x_test_new.shape[1],
+                                                    x_test_new.shape[2], x_test_new.shape[3],
+                                                    1])
 print(x_train_new.shape)
 print(x_test_new.shape)
 
@@ -278,7 +282,7 @@ mat_percentage_seq = mat_percentage_seq / (12 * 10)
 print('The average sequence accuracy derived from confusion matrix is:\n')
 print(np.trace(mat_percentage_seq) / 12)
 
-# output_dir = '/home/lab210/MattYen_workspace/gest_August/cross-scene/NEW/lstm/3t4rRDI/50-50/'
+# output_dir = '/home/lab210/MattYen_workspace/gest_August/cross-scene/NEW/lstm/3t4rRAI/50-50/'
 output_dir = 'E:/NTUT-master/Result/Original Data(Yen Li)/Training-Result/LSTM-YENLI/'
 if not os.path.isdir(output_dir):
     os.makedirs(output_dir)
@@ -319,10 +323,10 @@ fig_loss.savefig(output_dir + 'loss.png')
 # fig_loss.savefig(output_dir + 'loss.png')
 
 
-model.save(output_dir + 'model_NewConfig_lstm_3t4rRDI_32x32_Gaussian_batch12_ProgressSGD.h5')
-model.save_weights(output_dir + 'weightsNewConfig_lstm_3t4rRDI_32x32_Gaussian_batch12_ProgressSGD.h5')
+model.save(output_dir + 'model_NewConfig_lstm_3t4rRAI_32x32_Gaussian_batch12_ProgressSGD.h5')
+model.save_weights(output_dir + 'weightsNewConfig_lstm_3t4rRAI_32x32_Gaussian_batch12_ProgressSGD.h5')
 
-# model = load_model(output_dir + 'model_NewConfig_bilstm_1t4rRDI_32x32_Gaussian_batch12_ProgressSGD.h5')
+# model = load_model(output_dir + 'model_NewConfig_bilstm_1t4rRAI_32x32_Gaussian_batch12_ProgressSGD.h5')
 # model.load_weights(model_dir + 'weights_3t4r_lstm_RangeDoppler_32x32_gaussed_batch12_ProgressSgd.h5', by_name = True)
 # score = model.evaluate(x_test, y_test, batch_size=12)
 # predictions = model.predict(x_test_new)
