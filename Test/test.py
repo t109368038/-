@@ -1,48 +1,53 @@
-import time
-import threading
+# import cv2
+# import time
+# capture = cv2.VideoCapture(0)
+# capture.set(cv2.CAP_PROP_FPS, 20)
+# print(capture.get(cv2.CAP_PROP_FPS))
+# cc = 0
+# start = time.time()
+# while capture.isOpened():
+#
+#     ret, frame = capture.read()
+#     if ret:
+#         cc +=1
+#     end = time.time() - start
+#     if end != 0:
+#         fps = cc/end
+#         print(fps)
+
 import cv2
-class AddDaemon(object):
-    def __init__(self):
-        self.stuff = 'th1'
+import time
 
-    def add(self):
-        while True:
-            print(self.stuff)
-            time.sleep(1)
+cam = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+# cam.set(cv2.CAP_PROP_FPS, 30)
+#
+# print(cam.get(cv2.CAP_PROP_FPS))
 
+cam.set(cv2.CAP_PROP_FPS, 20)
 
-class RemoveDaemon(object):
-    def __init__(self):
-        self.stuff = 'th2'
+print(cam.get(cv2.CAP_PROP_FPS))
 
-    def rem(self):
-        while True:
-            print(self.stuff)
-            time.sleep(1)
-class RemoveDaemonx(object):
-    def __init__(self):
-        self.stuff = 'th3'
-        self.capture = cv2.VideoCapture(0)
-    def rem(self):
-        while True:
-            if self.capture.isOpened():
-                ret,frame = self.capture.read()
-                print(frame)
+# cam.set(cv2.CAP_PROP_FPS, 24)
+#
+# print(cam.get(cv2.CAP_PROP_FPS))
+count = 0
 
-def main():
-    a = AddDaemon()
-    r = RemoveDaemon()
-    c = RemoveDaemonx()
-    t1 = threading.Thread(target=r.rem)
-    t2 = threading.Thread(target=a.add)
-    t3 = threading.Thread(target=c.rem)
-    t1.setDaemon(True)
-    t2.setDaemon(True)
-    t3.setDaemon(True)
-    t1.start()
-    t2.start()
-    t3.start()
-    time.sleep(1000)
+start = time.time()
+while True:
+    ret, img = cam.read()
+    count += 1
+    vis = img.copy()
+    cv2.imshow('getCamera', vis)
 
-if __name__ == '__main__':
-    main()
+    end = time.time() - start
+    if count%100 == 0 :
+        fps = count/end
+        print(fps)
+        if fps > 19.9:
+            break
+    if 0xff & cv2.waitKey(5) == 27:
+        stop = time.time()
+        break
+end_all = time.time()
+print("cost time --> {}".format(end_all-start) )
+cv2.destroyAllWindows()

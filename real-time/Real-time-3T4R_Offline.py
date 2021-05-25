@@ -30,11 +30,14 @@ class Realtime_sys():
         self.fps_count =  0
         self.data_proecsss = DataProcessor_offline()
         self.path = 'C:/Users/user/Desktop/thmouse_training_data/'
+        self.load_gt()
+
     ## for test Usage
         self.sure_select = False
         # if self.sure_select ==False:
         #     self.SelectFolder()
         self.rai_mode =  0
+
 
     def start(self):
         self.run_state = True
@@ -91,34 +94,30 @@ class Realtime_sys():
     def update_figure(self):
         global count,view_rai,p13d
         self.Sure_staic_RM = self.static_rm.isChecked()
-        if self.fps_count % 3 ==2 :
-            self.fps_count += 1
-            self.th_cam1.get_frame()
-            self.th_cam2.get_frame()
-            QtCore.QTimer.singleShot(1, self.update_figure)
-        else:
-            if self.run_state:
-                self.RDI ,self.RAI,self.RAI_ele,self.PD = self.data_proecsss.run_proecss(self.rawData[self.frame_count],\
-                                                                self.rai_mode,self.Sure_staic_RM,self.chirp)
-                self.updatecam()
-                self.updatecam()
-                self.RDI_update()
-                self.RAI_update()
-                self.PD_update()
-                time.sleep(0.05)
-                if self.sure_next:
-                    self.frame_count +=1
-                    self.fps_count += 1
-                    QtCore.QTimer.singleShot(1, self.update_figure)
-                    QApplication.processEvents()
-                if self.sure_image:
-                    self.image_label1.setPixmap((self.th_cam1.get_frame()))
-                    self.image_label2.setPixmap((self.th_cam2.get_frame()))
 
+
+        if self.run_state:
+            self.RDI ,self.RAI,self.RAI_ele,self.PD = self.data_proecsss.run_proecss(self.rawData[self.frame_count],\
+                                                            self.rai_mode,self.Sure_staic_RM,self.chirp)
+            self.RDI_update()
+            self.RAI_update()
+            self.PD_update()
+            self.set_plotdata()
+            self.updatecam()
+            time.sleep(0.05)
+            if self.sure_next:
+                self.frame_count +=1
+                QtCore.QTimer.singleShot(1, self.update_figure)
+                QApplication.processEvents()
+
+            self.fps_count += 1
+
+            # print(self.frame_count)
 
     def updatecam(self):
-        self.image_label1.setPixmap((self.th_cam1.get_frame()))
-        self.image_label2.setPixmap((self.th_cam2.get_frame()))
+        if self.sure_image:
+            self.image_label1.setPixmap((self.th_cam1.get_frame()))
+            self.image_label2.setPixmap((self.th_cam2.get_frame()))
 
     def pre_frame(self):
         if self.frame_count >0:
@@ -200,6 +199,7 @@ class Realtime_sys():
             self.rawData =read_binfile.read_bin_file(self.file_path,[64,64,32,3,4],mode=0,header=False,packet_num=4322)
             self.rawData = np.transpose(self.rawData,[0,1,3,2])
             self.chirp = 32
+
         elif load_mode == 1:
             data  =np.load(self.file_path,allow_pickle=True)
             data = np.reshape(data, [-1, 4])
@@ -211,6 +211,84 @@ class Realtime_sys():
 
         self.enable_btns(True)
 
+    def load_gt(self):
+        self.hand_pd_1 = np.load(self.path + "cam_hp.npy", allow_pickle=True)
+        print("self.hand_pd_1 len is {}".format(self.hand_pd_1.shape))
+        self.hand_pd_2 = np.load(self.path + "cam_hp1.npy", allow_pickle=True)
+
+
+    def GetGroundTruth(self,x1, y1, x2, y2):
+        scale_x1 = 56 / 640 * 0.015  # cm / pixel * (0.015 point/cm)
+        scale_y1 = 44 / 480 * 0.015
+        scale_x2 = 45 / 640 * 0.015
+        scale_y2 = 33 / 480 * 0.015
+
+        if (y1 != None).all() == True:
+            y1 = y1.astype(np.double)
+            y1 = np.round((y1 * scale_y1), 3)
+            y1 -= ((480 * scale_y1) / 2)
+
+        x2 = np.where(x2 is not None, x2, np.double(320))
+        x2 = x2.astype(np.double)
+        x2 = (x2 * scale_x2)
+        x2 -= ((640 * scale_x2) / 2)
+        x2 = np.round(x2, 3)
+
+        y2 = np.where(y2 is not None, y2, np.double(480))
+        y2 = y2.astype(np.double)
+        y2 = (y2 * scale_y2)
+        y2 -= ((480 * scale_y2) / 2)
+        y2 = np.round(y2, 3)
+
+        return x2 * -1, y2 + 0.33, y1 * -1
+
+    def line_up1(self,view_PD):
+        self.w  = view_PD
+        self.traces = gl.GLScatterPlotItem(pos=np.array([[0, 0, 0]]), color=[0, 0, 255, 255], pxMode=True)
+        self.w.addItem(self.traces)
+
+        self.hand = gl.GLScatterPlotItem(pos=np.array([[0, 0, 0]]), color=[0, 255, 0, 255], pxMode=True)
+        self.w.addItem(self.hand)
+
+        self.hand_line = gl.GLLinePlotItem(pos=np.array([[[0, 0, 0], [2.5, 3.2, 1.5]], [[0, 0, 0], [1, 3.5, 4]]]),
+                                           color=[128, 255, 128, 255], antialias=False)
+        self.w.addItem(self.hand_line)
+
+        self.indexfinger = gl.GLScatterPlotItem(pos=np.array([[0, 0, 0]]), color=[0.35, 0.62, 0.35, 255], pxMode=True)
+        self.w.addItem(self.indexfinger)
+
+        self.thumb = gl.GLScatterPlotItem(pos=np.array([[0, 0, 0]]), color=[255, 0, 0, 255], pxMode=True)
+        self.w.addItem(self.thumb)
+
+    def set_plotdata(self):
+            h = self.frame_count
+            data = self.GetGroundTruth(self.hand_pd_1[h * 2, :], self.hand_pd_1[h * 2 + 1, :],
+                                       self.hand_pd_2[h * 2, :], self.hand_pd_2[h * 2 + 1, :])
+            # data = np.array(data)
+            # data = data[:, :3]
+            # data = data.reshape([-1, 3])
+            # self.traces.setData(pos=data, color=[0, 0, 255, 255], pxMode=True)
+
+            hand = np.array(data)
+            # print("hand_shape: {}".format(hand.shape))
+            hand = hand.transpose([1, 0])
+            self.hand.setData(pos=hand, color=[0, 255, 0, 255], pxMode=True)
+
+            line = np.array(
+                [[hand[0, :], hand[1, :]], [hand[1, :], hand[2, :]], [hand[2, :], hand[3, :]], [hand[3, :], hand[4, :]],
+                 [hand[0, :], hand[5, :]],
+                 [hand[5, :], hand[6, :]], [hand[6, :], hand[7, :]], [hand[7, :], hand[8, :]], [hand[5, :], hand[9, :]],
+                 [hand[9, :], hand[10, :]],
+                 [hand[10, :], hand[11, :]], [hand[11, :], hand[12, :]], [hand[9, :], hand[13, :]],
+                 [hand[13, :], hand[14, :]], [hand[14, :], hand[15, :]],
+                 [hand[15, :], hand[16, :]], [hand[13, :], hand[17, :]], [hand[17, :], hand[18, :]],
+                 [hand[18, :], hand[19, :]], [hand[19, :], hand[20, :]],
+                 [hand[0, :], hand[17, :]]])
+
+            self.hand_line.setData(pos=line, color=[0.5, 0.7, 0.9, 255], antialias=False)
+
+            self.indexfinger.setData(pos=hand[8, :], color=[0.88, 0.22, 0.35, 255], pxMode=True)
+            self.thumb.setData(pos=hand[4, :], color=pg.glColor((255, 255, 0)), pxMode=True)
 
     def plot(self):
         global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename,view_rai,p13d,nice
@@ -285,9 +363,10 @@ class Realtime_sys():
         view_PD.orbit(45,6)
         view_PD.pan(1,1,1,relative=1)
 
-        self.lineup(view_PD)
+        # self.lineup(view_PD)
+        self.line_up1(view_PD)
+        self.bounding_box(view_PD)
         self.enable_btns(False)
-
         # ang_cuv = pg.PlotDataItem(tmp_data, pen='r')
         # Colormap
         position = np.arange(64)
@@ -326,12 +405,14 @@ class Realtime_sys():
         self.view_rai.addItem(self.img_rai_ele)
         self.view_rdi.setRange(QtCore.QRectF(0, 0, 30, 70))
         self.view_rai.setRange(QtCore.QRectF(10, 0, 160, 80))
-        self.SelectFolder()
-        self.SelectFolder_cam2()
-        self.SelectFolder_cam1()
         updateTime = ptime.time()
+        if True:
+            self.SelectFolder()
+            self.SelectFolder_cam1()
+            self.SelectFolder_cam2()
         self.app.instance().exec_()
         # print('=======================================')
+
     def lineup(self,view_PD):
         ###---------------------------------------------
         self.hand = gl.GLScatterPlotItem(pos=np.array([[0, 0, 0]]), color=[0, 255, 0, 255], pxMode=True)
@@ -378,6 +459,44 @@ class Realtime_sys():
         view_PD.addItem(self.hand_linez)
         view_PD.addItem(self.hand_linex)
 
+    def build_GLline(self,p1,p2):
+        x1 = p1[0];y1 = p1[1];z1 = p1[2]
+        x2 = p2[0];y2 = p2[1];z2 = p2[2]
+        return  gl.GLLinePlotItem(pos=np.array([[[x1, y1, z1], [x2, y2, z2]]]), color=[128, 255, 128, 255], antialias=False)
+
+    def bounding_box(self,view_PD):
+        half_len = 0.1875
+        all_len = 0.1875*2
+        self.line1 = self.build_GLline([half_len,       0,    half_len], [-1*half_len,       0,    half_len])
+        self.line2 = self.build_GLline([half_len, all_len,    half_len], [-1*half_len, all_len,    half_len])
+        self.line3 = self.build_GLline([half_len,       0, -1*half_len], [-1*half_len,       0, -1*half_len])
+        self.line4 = self.build_GLline([half_len, all_len, -1*half_len], [-1*half_len, all_len, -1*half_len])
+
+        self.line5 = self.build_GLline([half_len,       0,    half_len], [half_len,       0, -1*half_len])
+        self.line6 = self.build_GLline([half_len,       0,    half_len], [half_len, all_len,    half_len])
+        self.line7 = self.build_GLline([half_len, all_len,    half_len], [half_len, all_len, -1*half_len])
+        self.line8 = self.build_GLline([half_len,       0, -1*half_len], [half_len, all_len, -1*half_len])
+
+        self.line9  = self.build_GLline([-1*half_len,       0,    half_len], [-1*half_len,       0, -1*half_len])
+        self.line10 = self.build_GLline([-1*half_len,      0,    half_len], [-1*half_len, all_len,    half_len])
+        self.line11 = self.build_GLline([-1*half_len, all_len,    half_len], [-1*half_len, all_len, -1*half_len])
+        self.line12 = self.build_GLline([-1*half_len,      0, -1*half_len], [-1*half_len, all_len, -1*half_len])
+
+        view_PD.addItem(self.line1)
+        view_PD.addItem(self.line2)
+        view_PD.addItem(self.line3)
+        view_PD.addItem(self.line4)
+        view_PD.addItem(self.line5)
+        view_PD.addItem(self.line6)
+        view_PD.addItem(self.line7)
+        view_PD.addItem(self.line8)
+        view_PD.addItem(self.line9)
+        view_PD.addItem(self.line10)
+        view_PD.addItem(self.line11)
+        view_PD.addItem(self.line12)
+
+    def pd2voxel(self,pd):
+        voxel_grid = np.zeros((25, 25, 25, 1), dtype=np.uint8)
 
 
 if __name__ == '__main__':

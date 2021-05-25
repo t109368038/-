@@ -90,11 +90,9 @@ while success :
 
         cv2.imshow("frame",frame)
 
-        if (passframe%3)==1:
-            pass
-        else:
-            cam_hp = cam_hp + [x1, y1]
-            vout.write(frame)
+
+        cam_hp = cam_hp + [x1, y1]
+        vout.write(frame)
         passframe += 1
 
 
@@ -108,6 +106,14 @@ if only_one == 0:
 ###==============================================================
 ###==============================================================
 ###==============================================================
+
+hands = mp_hands.Hands(
+    # static_image_mode=True,
+    max_num_hands=1,
+    min_detection_confidence=0.5,
+    min_tracking_confidence=0.5,
+    )
+
 videoCapture1 =  cv2.VideoCapture(data_path+"vedio2.mp4")
 fps1 = videoCapture1.get(cv2.CAP_PROP_FPS)
 size1 = (int(videoCapture1.get(cv2.CAP_PROP_FRAME_WIDTH)),
@@ -138,8 +144,8 @@ only_one = 1
 #--------vediowriter setting--------------
 sz = (int(videoCapture.get(cv2.CAP_PROP_FRAME_WIDTH)), int(videoCapture.get(cv2.CAP_PROP_FRAME_HEIGHT)))
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-vout = cv2.VideoWriter()
-vout.open(data_path + '/media'+str(only_one)+ '.mp4',fourcc, 30, sz, True)
+vout1 = cv2.VideoWriter()
+vout1.open(data_path + '/media'+str(only_one)+ '.mp4',fourcc, 30, sz, True)
 passframe = 0
 print("Fuck")
 while success1 :
@@ -170,15 +176,12 @@ while success1 :
 
         cv2.imshow("frame1",frame1)
 
-        if (passframe % 3) == 1:
-            pass
-        else:
-            cam1_hp = cam1_hp + [x2, y2]
-            vout.write(frame1)
-        passframe+=1
+        cam1_hp = cam1_hp + [x2, y2]
+        vout1.write(frame1)
+
 
     success1, frame1 = videoCapture1.read()
     cv2.waitKey(30) #延迟
 if only_one == 1:
     np.save(data_path + "/cam_hp1.npy",cam1_hp)
-    vout.release()
+    vout1.release()

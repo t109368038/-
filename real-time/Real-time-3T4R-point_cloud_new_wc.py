@@ -28,9 +28,9 @@ from pd_layout_new_wbcam import Ui_MainWindow
 
 set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM13', BaudRate=115200)
 config = '../radar_config/xwr68xx_profile_2021_03_23T08_12_36_405.cfg'
-# config = '../radar_config/IWR1843_3d.cfg'
 
 class Realtime_sys():
+
     def __init__(self):
         adc_sample = 64
         chirp = 16
@@ -40,17 +40,19 @@ class Realtime_sys():
         frame_length = adc_sample * chirp * tx_num * rx_num * 2
         # Host setting
         address = ('192.168.33.30', 4098)
-        buff_size = 2097152*2
-        self.save_frame_len = 1000
+        buff_size = 2097152
+        self.save_frame_len = 200
         # call class
         self.bindata = Queue()
         self.rawdata = Queue()
+        self.collector = UdpListener('Listener', frame_length, address, buff_size,self.bindata,self.rawdata)
         # self.collector.rawdata_signal.connect(self.append_rawdata)
         self.cam1_thread = RTSPVideoWriterObject(0, "vedio1", save_frame_len=self.save_frame_len)
         self.cam2_thread = RTSPVideoWriterObject(1, "vedio2", save_frame_len=self.save_frame_len)
         self.cam1_thread.change_pixmap_signal.connect(self.update_cam1) # Qthread link slot
         self.cam2_thread.change_pixmap_signal.connect(self.update_cam2)
-        self.collector = UdpListener('Listener', frame_length, address, buff_size,self.bindata,self.rawdata)
+        self.cam1_thread.start()
+        self.cam2_thread.start()
         self.processor = DataProcessor('Processor', self.radar_config, self.bindata, "0105", status=0 )
         self.processor.data_signal.connect(self.Qthreadupdate_fig)
 
@@ -71,28 +73,11 @@ class Realtime_sys():
         self.sure_select = False
         self.realtime_mdoe = True
         self.rai_mode =  0
-        self.save_thread = threading.Thread(target=self.SaveData)
 
     def restart(self):
-        # self.cam1_thread.restart_videowriter()
-        # self.cam2_thread.restart_videowriter()
-        pass
+        self.cam1_thread.restart_videowriter()
+        self.cam2_thread.restart_videowriter()
 
-    def restart_radar(self):
-        self.collector.data_socket.close()
-        self.collector.terminate()
-        adc_sample = 64
-        chirp = 16
-        tx_num = 3
-        rx_num = 4
-        self.record_rtbtn.setEnabled(True)
-        self.save_thread = threading.Thread(target=self.SaveData)
-        frame_length = adc_sample * chirp * tx_num * rx_num * 2
-        # Host setting
-        address = ('192.168.33.30', 4098)
-        buff_size = 2097152 * 2
-        self.collector = UdpListener('Listener', frame_length, address, buff_size,self.bindata,self.rawdata)
-        self.openradar()
 
     def append_rawdata(self,rawdata):
         self.raw.append(rawdata)
@@ -100,13 +85,13 @@ class Realtime_sys():
 
     def Qthreadupdate_fig(self,rdi,rai,pd):
         self.processor.Sure_staic_RM = self.static_rm.isChecked()
-        
+
         if self.pd_save_status == 1  :
             self.raw.append(self.rawdata.get())
             self.frame_count += 1
             if self.frame_count>=self.save_frame_len:
                 self.StopRecord()
-                self.save_thread.start()
+                self.SaveData()
         # if not rai.empty():
         self.img_rdi.setImage(np.rot90(rdi, 1))
         # if not rai.empty():
@@ -174,12 +159,12 @@ class Realtime_sys():
         global count, view_rai, p13d,nice,ax
         # --------------- plot 3d ---------------
         if self.realtime_mdoe:
-            if not pointcloud.empty():
-                pos = pointcloud.get()
-                pos = np.transpose(pos, [1, 0])
-                p13d.setData(pos=pos[:, :3], color=[1, 0.35, 0.02, 1], pxMode=True)
-                if self.pd_save_status == 1:
-                    self.save_process()
+            # if not pointcloud.empty():
+            pos = pointcloud.get()
+            pos = np.transpose(pos, [1, 0])
+            p13d.setData(pos=pos[:, :3], color=[1, 0.35, 0.02, 1], pxMode=True)
+            if self.pd_save_status == 1:
+                self.save_process()
 
     def update_figure(self):
         global count,view_rai,p13d
@@ -301,6 +286,7 @@ class Realtime_sys():
         self.enable_btns(True)
 
     def StartRecord(self):
+        self.starttime = time.time()
         self.processor.status = 1
         self.collector.status = 1
         self.cam1_thread.record = True
@@ -310,6 +296,9 @@ class Realtime_sys():
         print('=======================================')
 
     def StopRecord(self):
+        total= time.time()- self.starttime
+        fps = self.save_frame_len/total
+        print("FPS is {}".format(fps))
         self.processor.status = 0
         self.collector.status = 0
         self.pd_save_status = 0
@@ -329,39 +318,35 @@ class Realtime_sys():
         config_address = ('192.168.33.30', 4096)
         FPGA_address_cfg = ('192.168.33.180', 4096)
         cmd_order = ['9', 'E', '3', 'B', '5', '6']
-        self.sockConfig = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sockConfig.bind(config_address)
+        sockConfig = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sockConfig.bind(config_address)
         for k in range(5):
             # Send the command
-            self.sockConfig.sendto(send_cmd(cmd_order[k]), FPGA_address_cfg)
+            sockConfig.sendto(send_cmd(cmd_order[k]), FPGA_address_cfg)
             time.sleep(0.1)
             # Request data back on the config port
-            msg, server = self.sockConfig.recvfrom(2048)
+            msg, server = sockConfig.recvfrom(2048)
             # print('receive command:', msg.hex())
-        self.sockConfig.close()
-
+        sockConfig.close()
     def openradar(self):
         set_radar.StopRadar()
         set_radar.SendConfig(config)
         self.collector.start()
         self.processor.start()
-        self.cam1_thread.start()
-        self.cam2_thread.start()
+
+        # self.update_figure()
         print('=============openradar=================')
 
 
     def exit(self):
-        # self.cam1_thread.quit()
-        # self.cam2_thread.quit()
+        self.cam1_thread.quit()
+        self.cam2_thread.quit()
         self.app.instance().exit()
 
     def SaveData(self):
-
         np.save("C:/Users/user/Desktop/thmouse_training_data/raw.npy", self.raw)
         self.raw = []
         self.frame_count = 0
-        self.record_rtbtn.setEnabled(False)
-        set_radar.StopRadar()
 
     def plot(self):
         global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename,view_rai,p13d,nice
@@ -396,14 +381,12 @@ class Realtime_sys():
         self.save_rtbtn = ui.save_rtbtn
         self.exit_rtbtn = ui.exit_rtbtn
         self.restart_rtbtn = ui.restart_rtbtn
-        self.restart_radar_rtbtn = ui.restart_radar_rtbtn
         self.start_dca_rtbtn.clicked.connect(self.ConnectDca1000)
         self.send_cfg_rtbtn.clicked.connect(self.openradar)
         self.record_rtbtn.clicked.connect(self.StartRecord)
         self.exit_rtbtn.clicked.connect(self.exit)
         self.save_rtbtn.clicked.connect(self.SaveData)
         self.restart_rtbtn.clicked.connect(self.restart)
-        self.restart_radar_rtbtn.clicked.connect(self.restart_radar)
         #----------------- btn clicked connet -----------------
         self.browse_btn.clicked.connect(self.SelectFolder)
         self.cam1_btn.clicked.connect(self.SelectFolder_cam1)

@@ -18,6 +18,10 @@ class RTSPVideoWriterObject(QThread):
         self.wc_number = src
         self.record_frame_len  = save_frame_len
         self.capture = cv2.VideoCapture(src)
+        # self.capture.set(cv2.CV_CAP_PROP_FPS, 25)
+        self.capture.set(cv2.CAP_PROP_FPS, 20)
+        print(self.capture.get(cv2.CAP_PROP_FPS))
+
         self.capture.set(3, 640)  # 設定解析度
         self.capture.set(4, 480)
         self.record = False
@@ -28,7 +32,7 @@ class RTSPVideoWriterObject(QThread):
         # Set up codec and output video settings
         self.codec = cv2.VideoWriter_fourcc(*'mp4v')
         self.mp4_path = 'C:/Users/user/Desktop/thmouse_training_data/'+ filename +".mp4"
-        self.output_video = cv2.VideoWriter(self.mp4_path, self.codec, 30, (self.frame_width, self.frame_height))
+        self.output_video = cv2.VideoWriter(self.mp4_path, self.codec, 20, (self.frame_width, self.frame_height))
         self.readframe = 0
         self.fps_count = 0
         self.start_time = time.time()
@@ -54,17 +58,25 @@ class RTSPVideoWriterObject(QThread):
 
     def update(self):
         # Read the next frame from the stream in a different thread
+        timestart = time.time()
         while True:
             if self.capture.isOpened():
+
                 (self.status, self.frame) = self.capture.read()
+
                 # print("cam1{} gogo ".format(self.wc_number))
                 if self.record:
                     img = self.convert_cv_qt(self.frame)
                     self.change_pixmap_signal.emit(img)
-                    print("frame:{}".format(self.readframe))
+                    print("cam{} frame:{}".format(self.wc_number,self.readframe))
                     self.save_frame()
                     self.readframe += 1
+
+                time_end = time.time() - timestart
                 self.fps_count += 1
+                fps = self.fps_count/time_end
+                if self.fps_count % 100 ==0:
+                    print(fps)
 
     def show_frame(self):
         # Display frames in main program
@@ -123,8 +135,8 @@ if __name__ == '__main__':
     video_stream_widget.change_pixmap_signal.connect(update_image)
     video_stream_widget.record = True
 
-    while True:
-        if keyboard.is_pressed('s'):  # if key 'q' is pressed
-            video_stream_widget.record = False
-            video_stream_widget.close_webcam()
-            break
+    # while True:
+    #     if keyboard.is_pressed('s'):  # if key 'q' is pressed
+    #         video_stream_widget.record = False
+    #         video_stream_widget.close_webcam()
+    #         break

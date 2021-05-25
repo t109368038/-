@@ -10,22 +10,28 @@ from PyQt5 import QtGui
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
 
 class CamCapture():
+
     def __init__(self, path):
+        super(CamCapture, self).__init__()
         self.path = path
         self.capture = cv2.VideoCapture(path)
+        length = int(self.capture.get(cv2.CAP_PROP_FRAME_COUNT))
+        print(" frame len is {}".format(length))
+        print(self.capture)
         print("{} frame com is {}".format(path,self.capture.get(7)))
         self.disply_width = 640
         self.display_height = 480
 
     def get_frame(self):
+
         ret,frame  = self.capture.read()
 
         if ret == True :
             # frame = np.rot90(frame,2)
+
             qt_img = self.convert_cv_qt(frame)
 
-            # print(type(qt_img))
-            return qt_img
+            return  qt_img
 
     def convert_cv_qt(self, cv_img):
         """Convert from an opencv image to QPixmap"""
