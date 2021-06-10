@@ -123,7 +123,12 @@ class Ui_MainWindow(object):
         self.exit_rtbtn  = btn_class(self.centralwidget,"exit_rtbtn",start_rt+500,high_rt,90,30,self.btn_group_real)
         self.restart_rtbtn  = btn_class(self.centralwidget,"restart_rtbtn",start_rt+600,high_rt,90,30,self.btn_group_real)
         self.restart_radar_rtbtn  = btn_class(self.centralwidget,"restart_rtbtn",start_rt+700,high_rt,90,30,self.btn_group_real)
-        # self.label_frame =  label_class()
+        self.label_frame_count = label_class(self.centralwidget, "label_frame_count", start_rt, high_rt+50, 150, 30)
+        self.label_frame_count1 = label_class(self.centralwidget, "label_frame_count1", start_rt+450, high_rt+50, 150, 30)
+        self.edit_frame_count = textEdit_class(self.centralwidget, "edit_frame_count", start_rt+130, high_rt+50, 150, 30)
+        self.btn_frame_count = btn_class(self.centralwidget, "btn_frame_count", start_rt+290, high_rt+50, 100, 30,self.btn_group_real)
+        self.edit_frame_count.mousePressEvent = self.clear_editor_content
+
         # ----------rai/Beamforming rai / Cfar+static_rm-----------
         self.orgin_rai = radio_class(self.centralwidget,"orgin_rai",670,600,200,30,self.radio_btn_group,0)
         self.beam_rai = radio_class(self.centralwidget,"beam_rai",670,640,200,30,self.radio_btn_group,1)
@@ -132,6 +137,7 @@ class Ui_MainWindow(object):
         self.textEdit = textEdit_class(self.centralwidget,"textEdit_save",150, path3, 400, 30)
         self.textEdit_cam1 = textEdit_class(self.centralwidget,"textEdit_save",150, path1, 400, 30)
         self.textEdit_cam2 = textEdit_class(self.centralwidget,"textEdit_save",150, path2, 400, 30)
+
 
         # self.textEdit = QTextEdit(self.centralwidget)
         # self.textEdit.setGeometry(QtCore.QRect(150, 670, 400, 30))
@@ -151,10 +157,10 @@ class Ui_MainWindow(object):
         grey.fill(QColor('darkGray'))
         self.image_label1 = QtWidgets.QLabel(self.centralwidget)
         self.image_label1.setPixmap(grey)
-        self.image_label1.setGeometry(QtCore.QRect(1160, 30, 640, 480))
+        self.image_label1.setGeometry(QtCore.QRect(1160, 0, 640, 480))
         self.image_label2 = QtWidgets.QLabel(self.centralwidget)
         self.image_label2.setPixmap(grey)
-        self.image_label2.setGeometry(QtCore.QRect(1160,550, 640, 480))
+        self.image_label2.setGeometry(QtCore.QRect(1160,510, 640, 480))
 
 
         MainWindow.setCentralWidget(self.centralwidget)
@@ -163,6 +169,9 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
+
+    def clear_editor_content(self, event):
+        self.edit_frame_count.clear()
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
@@ -196,3 +205,7 @@ class Ui_MainWindow(object):
         self.exit_rtbtn.setText(_translate("MainWindow", "Exit"))
         self.restart_rtbtn.setText(_translate("MainWindow", "restart"))
         self.restart_radar_rtbtn.setText(_translate("MainWindow", "restart_radar"))
+        self.label_frame_count.setText(_translate("MainWindow", "Save frame Len:"))
+        self.label_frame_count1.setText(_translate("MainWindow", "number"))
+        self.edit_frame_count.setText(_translate("MainWindow", "1000"))
+        self.btn_frame_count.setText(_translate("MainWindow", "Open Cam"))

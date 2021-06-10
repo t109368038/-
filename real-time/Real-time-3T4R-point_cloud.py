@@ -503,7 +503,7 @@ if __name__ == '__main__':
     # lock = threading.Lock()
     lock = None
     if opencamera:
-        cam1 = CamCapture(0, 'First', 0, lock, CAMData, cam_rawData, mode=1,mp4_path='C:/Users/user/Desktop/thmouse_training_data/')
+        cam1 = CamCapture(0, 'First', 0, lock, CAMData, cam_rawData, mode=0,mp4_path='C:/Users/user/Desktop/thmouse_training_data/')
         cam2 = CamCapture(1, 'Second', 1, lock, CAMData2, cam_rawData2, mode=1,mp4_path='C:/Users/user/Desktop/thmouse_training_data/')
 
     realtime = Realtime_sys(cam1,cam2)

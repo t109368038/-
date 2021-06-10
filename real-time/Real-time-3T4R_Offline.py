@@ -75,7 +75,7 @@ class Realtime_sys():
             # ------no static remove------
             # img_rai.setImage(np.fliplr((a)).T,levels=[20e4, 50.0e4])
             img_rai.setImage(np.fliplr((a)).T,)
-            # self.img_rai_ele.setImage(np.fliplr((e)).T,levels=[20e4, 50.0e4])
+            # self.img_rai_ele.setImage(np.fliplr((e)).T,levels=[2FG0e4, 50.0e4])
             self.img_rai_ele.setImage(np.fliplr((e)).T)
 
         else:
@@ -94,7 +94,12 @@ class Realtime_sys():
     def update_figure(self):
         global count,view_rai,p13d
         self.Sure_staic_RM = self.static_rm.isChecked()
-
+        if self.frame_count == self.frame_total_len:
+            self.run_state = False
+            # print(len(self.pd_save))
+            print(self.pd_save)
+            np.save(self.path+"pd_data.npy",self.pd_save)
+            self.app.instance().exec_()
 
         if self.run_state:
             self.RDI ,self.RAI,self.RAI_ele,self.PD = self.data_proecsss.run_proecss(self.rawData[self.frame_count],\
@@ -104,6 +109,7 @@ class Realtime_sys():
             self.PD_update()
             self.set_plotdata()
             self.updatecam()
+            self.pd_save.append(self.PD.T)
             time.sleep(0.05)
             if self.sure_next:
                 self.frame_count +=1
@@ -495,8 +501,6 @@ class Realtime_sys():
         view_PD.addItem(self.line11)
         view_PD.addItem(self.line12)
 
-    def pd2voxel(self,pd):
-        voxel_grid = np.zeros((25, 25, 25, 1), dtype=np.uint8)
 
 
 if __name__ == '__main__':

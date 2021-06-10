@@ -363,7 +363,7 @@ if __name__ == '__main__':
 
     # lock = threading.Lock()
     if opencamera:
-        cam1 = CamCapture(1, 'First', 1, "lock", CAMData, cam_rawData, mode=1,mp4_path="D:/kaiku_report/2021-0418for_posheng/")
+        cam1 = CamCapture(1, 'First', 1, "lock", CAMData, cam_rawData, mode=0,mp4_path="D:/kaiku_report/2021-0418for_posheng/")
         cam2 = CamCapture(0, 'Second', 0, "lock", CAMData2, cam_rawData2, mode=1,mp4_path="D:/kaiku_report/2021-0418for_posheng/")
 
     collector = UdpListener('Listener', BinData, frame_length, address, buff_size, rawData)

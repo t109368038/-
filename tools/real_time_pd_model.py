@@ -1,4 +1,3 @@
-import threading as th
 import numpy as np
 import socket
 import DSP_2t4r

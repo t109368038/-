@@ -10,7 +10,6 @@ import serial
 import pyqtgraph as pg
 import pyqtgraph.ptime as ptime
 from pyqtgraph.Qt import QtCore, QtGui, QtWidgets
-import pyqtgraph.opengl as gl
 import numpy as np
 import threading
 import time
@@ -19,12 +18,11 @@ import socket
 import cv2
 
 # -----------------------------------------------
-from app_layout_2t4r import Ui_MainWindow
-from R3t4r_to_point_cloud_for_realtime import plot_pd
+from app_layout_2t4r_origin import Ui_MainWindow
 # -----------------------------------------------
 # config = '../radar_config/IWR1843_cfg_3t4r_v3.4_1.cfg'
 config = '../radar_config/xwr68xx_profile_2021_03_23T08_12_36_405.cfg'
-# config = '..  /radar_config/xwr18xx_profile_2021_03_09T10_45_11_974.cfg'
+# config = '../radar_config/xwr18xx_profile_2021_03_09T10_45_11_974.cfg'
 # config = '../radar_config/IWR1843_3d.cfg'
 # config = '../radar_config/xwr18xx_profile_2021_03_05T07_10_37_413.cfg'
 
@@ -88,40 +86,33 @@ def send_cmd(code):
 
 
 def update_figure():
-    global count,view_rai,p13d
+    global count
     win_param = [8, 8, 3, 3]
     # cfar_rai = CA_CFAR(win_param, threshold=2.5, rd_size=[64, 181])
     if not RDIData.empty():
         rd = RDIData.get()
-        img_rdi.setImage(rd[:, :, 0].T)
         # img_rdi.setImage(rd[:, :, 0].T, levels=[0, 2.6e4])
-        # img_rdi.setImage(np.rot90(np.fft.fftshift(rd, axes=1), 3))
+        img_rdi.setImage(np.rot90(np.fft.fftshift(rd, axes=1), 3))
         # img_rdi.setImage(np.abs(RDIData.get()[:, :, 0].T))
         # img_rai.setImage(cfar_rai(np.fliplr(RAIData.get()[0, :, :])).T)
         # ang_cuv.setData(rd[:, :, 0].sum(1))
 
     if not RAIData.empty():
         xx = RAIData.get()[:, :, :].sum(0)
-        img_rai.setImage((np.fliplr(np.flip(xx[36:-1,:], axis=0)).T))
-        # img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T)
+        # img_rai.setImage((np.fliplr(np.flip(xx[36:-1,:], axis=0)).T))
+
+        img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T)
         # np.save('../data/0105/rai_new' + str(count), xx[36:-1, :])
+
         # img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T, levels=[1.2e4, 4e6])
         # angCurve.plot((np.fliplr(np.flip(xx, axis=0)).T)[:, 10:12].sum(1), clear=True)
 
-    # --------------- plot 3d ---------------
-    # data = BinData.get()
-    # x,y,z,s  = plot_pd(data)
-    # pos = np.zeros([len(x),4])
-    # pos[:,0] = x
-    # pos[:,1] = y
-    # pos[:,2] = z
-    # pos[:,3] = s
-    # p13d.setData(pos=pos)
-    # z=pg.gaussianFilter(np.random.normal(size=(50, 50)), (1, 1))
+    if not CAMData.empty():
+        yy = CAMData.get()
+        # np.save('../data/img/' + str(count), yy)
+        img_cam.setImage(np.rot90(yy, -1))
 
     QtCore.QTimer.singleShot(1, update_figure)
-    # QtCore.QTimer.singleShot(1, Run_PD())
-
     now = ptime.time()
     updateTime = now
     count += 1
@@ -141,8 +132,8 @@ def openradar():
 def StartRecord():
     # processor.status = 1
     collector.status = 1
-    cam1.status = 1
-    cam2.status = 1
+    # cam1.status = 1
+    # cam2.status = 1
     print('Start Record Time:', (time.ctime(time.time())))
     print('=======================================')
 
@@ -150,8 +141,8 @@ def StartRecord():
 def StopRecord():
     # processor.status = 0
     collector.status = 0
-    cam1.status = 0
-    cam2.status = 0
+    # cam1.status = 0
+    # cam2.status = 0
     print('Stop Record Time:', (time.ctime(time.time())))
     print('=======================================')
 
@@ -177,13 +168,10 @@ def ConnectDca():
 def SelectFolder():
     root = tk.Tk()
     root.withdraw()
-    file_path = filedialog.asksaveasfilename(parent=root, initialdir='E:')
+    file_path = filedialog.asksaveasfilename(parent=root, initialdir='E:/ResearchData/ThuMouseData')
     return file_path
 
-def Run_PD():
-    data = BinData.get()
-    plot_pd(data)
-    return  None
+
 def SaveData():
     global savefilename, sockConfig, FPGA_address_cfg
     set_radar.StopRadar()
@@ -195,8 +183,8 @@ def SaveData():
         # name = savefilename.toPlainText()
         print('=======================================')
         print('File Save Radar:', path + '_rawdata')
-        print('File Same Cam1:', path + '_cam1')
-        print('File Same Cam2:', path + '_cam2')
+        # print('File Same Cam1:', path + '_cam1')
+        # print('File Same Cam2:', path + '_cam2')
         print('=======================================')
         data_save = []
         while not rawData.empty():
@@ -205,20 +193,20 @@ def SaveData():
         np.save(path + '_rawdata', data_save)
         print('Radar File Size', np.shape(data_save)[0])
         print('=======================================')
-        cam_save = []
-        while not cam_rawData.empty():
-            tmp = cam_rawData.get()
-            cam_save.append(tmp)
-        np.save(path + '_cam1', cam_save)
-        print('Camera 1 File Size:', np.shape(cam_save)[0])
-        print('=======================================')
-        cam_save2 = []
-        while not cam_rawData2.empty():
-            tmp = cam_rawData2.get()
-            cam_save2.append(tmp)
-        np.save(path  + '_cam2', cam_save2)
-        print('Camera 2 File Size:', np.shape(cam_save2)[0])
-        print('=======================================')
+        # cam_save = []
+        # while not cam_rawData.empty():
+        #     tmp = cam_rawData.get()
+        #     cam_save.append(tmp)
+        # np.save(path + '_cam1', cam_save)
+        # print('Camera 1 File Size:', np.shape(cam_save)[0])
+        # print('=======================================')
+        # cam_save2 = []
+        # while not cam_rawData2.empty():
+        #     tmp = cam_rawData2.get()
+        #     cam_save2.append(tmp)
+        # np.save(path  + '_cam2', cam_save2)
+        # print('Camera 2 File Size:', np.shape(cam_save2)[0])
+        # print('=======================================')
         print('Save File Done')
         print('=======================================')
 
@@ -232,7 +220,7 @@ def SaveData():
 
 
 def plot():
-    global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename,view_rai,p13d
+    global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename
     # ---------------------------------------------------
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
@@ -243,22 +231,10 @@ def plot():
     ui.setupUi(MainWindow)
     view_rdi = ui.graphicsView.addViewBox()
     view_rai = ui.graphicsView_2.addViewBox()
-    # view_cam = ui.graphicsView_3
-    # xgrid = gl.GLGridItem()
-    # ygrid = gl.GLGridItem()
-    # zgrid = gl.GLGridItem()
-    # view_cam.addItem(xgrid)
-    # view_cam.addItem(ygrid)
-    # view_cam.addItem(zgrid)
-    # xgrid.translate(0,0,-10)
-    # ygrid.translate(0, 0, 10)
-    # zgrid.translate(0, 0, -10)
-    # xgrid.rotate(90, 0, 1, 0)
-    # ygrid.rotate(90, 1, 0, 0)
-    pos = np.random.randint(-10, 10, size=(1000, 3))
-    pos[:, 2] = np.abs(pos[:, 2])
-    p13d = gl.GLScatterPlotItem(pos = pos)
-    # view_cam.addItem(p13d)
+    view_cam = ui.graphicsView_3.addViewBox()
+
+    # view_angCurve = ui.graphicsView_3.addViewBox()
+
     starbtn = ui.pushButton_start
     exitbtn = ui.pushButton_exit
     recordbtn = ui.pushButton_record
@@ -266,7 +242,6 @@ def plot():
     savebtn = ui.pushButton_save
     dcabtn = ui.pushButton_DCA
     savefilename = ui.label_3
-    pd_btn = ui.pd_btn
     # savefilename = ui.textEdit
     # ---------------------------------------------------
     # lock the aspect ratio so pixels are always square
@@ -275,8 +250,9 @@ def plot():
     # view_cam.setAspectLocked(True)
     img_rdi = pg.ImageItem(border='w')
     img_rai = pg.ImageItem(border='w')
-    # img_cam = pg.ImageItem(border='w')
-
+    img_cam = pg.ImageItem(border='w')
+    # ang_cuv = pg.PlotDataItem(tmp_data, pen='r')
+    # Colormap
     position = np.arange(64)
     position = position / 64
     position[0] = 0
@@ -308,21 +284,19 @@ def plot():
     img_rai.setLookupTable(lookup_table)
     view_rdi.addItem(img_rdi)
     view_rai.addItem(img_rai)
-    # view_cam.addItem(img_cam)
+    view_cam.addItem(img_cam)
+    # view_angCurve.addItem(ang_cuv)
 
     # Set initial view bounds
     view_rdi.setRange(QtCore.QRectF(-5, 0, 140, 80))
     view_rai.setRange(QtCore.QRectF(10, 0, 160, 80))
     updateTime = ptime.time()
-    #----------------- btn clicked connet -----------------
     starbtn.clicked.connect(openradar)
     recordbtn.clicked.connect(StartRecord)
     stoprecordbtn.clicked.connect(StopRecord)
     savebtn.clicked.connect(SaveData)
     dcabtn.clicked.connect(ConnectDca)
     exitbtn.clicked.connect(app.instance().exit)
-    pd_btn.btn.clicked.connect(Run_PD)
-    # -----------------------------------------------------
     app.instance().exec_()
     set_radar.StopRadar()
     print('=======================================')
@@ -347,22 +321,26 @@ if __name__ == '__main__':
     rx_num = 4
     radar_config = [adc_sample, chirp, tx_num, rx_num]
     frame_length = adc_sample * chirp * tx_num * rx_num * 2
-    # Host setting
-    address = ('192.168.33.30', 4098)
+    # Host setting    address = ('192.168.33.30', 4098)
     buff_size = 2097152
 
-    is_camera = True
+    # # config DCA1000 to receive bin data
+    # config_address = ('192.168.33.30', 4096)
+    # FPGA_address_cfg = ('192.168.33.180', 4096)
+    # cmd_order = ['9', 'E', '3', 'B', '5', '6']
+    # sockConfig = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    # sockConfig.bind(config_address)
+
 
     lock = threading.Lock()
-    if is_camera:
-        cam1 = CamCapture(1, 'First', 1, lock, CAMData, cam_rawData, mode=1,mp4_path="C:/Users//user/Desktop/2021-03-31/")
-        cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1,mp4_path="C:/Users//user/Desktop/2021-03-31/")
+    # cam1 = CamCapture(1, 'First', 1, lock, CAMData, cam_rawData, mode=1)
+    # cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1)
 
     collector = UdpListener('Listener', BinData, frame_length, address, buff_size, rawData)
     processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, 0, "0105", status=0)
-    if is_camera:
-        cam1.start()
-        cam2.start()
+
+    # cam1.start()
+    # cam2.start()
     collector.start()
     processor.start()
     plotIMAGE = threading.Thread(target=plot())
@@ -372,9 +350,8 @@ if __name__ == '__main__':
     # sockConfig.close()
     collector.join(timeout=1)
     processor.join(timeout=1)
-    if is_camera:
-        cam1.close()
-        cam2.close()
+    # cam1.close()
+    # cam2.close()
 
     print("Program Close")
     sys.exit()

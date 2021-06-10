@@ -11,20 +11,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QTextEdit
 from pyqtgraph import GraphicsLayoutWidget
-import pyqtgraph.opengl as gl
-
-class btn_class():
-    def __init__(self, widget, obj_name, loc_x, loc_y, w, h):
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體 Light")
-        font.setBold(True)
-        font.setItalic(False)
-        font.setWeight(75)
-        self.btn = QtWidgets.QPushButton(widget)
-        self.btn.setGeometry(QtCore.QRect(loc_x, loc_y, w , h ))
-        self.btn.setFont(font)
-        self.btn.setObjectName(obj_name)
-
 
 class Ui_MainWindow(object):
 
@@ -42,12 +28,10 @@ class Ui_MainWindow(object):
         self.graphicsView.setGeometry(QtCore.QRect(30, 60, 600, 600))
         self.graphicsView.setObjectName("graphicsView")
         self.graphicsView_2 = GraphicsLayoutWidget(self.centralwidget)
-        # self.graphicsView_2 = gl.GLViewWidget(self.centralwidget)
         self.graphicsView_2.setGeometry(QtCore.QRect(660, 60, 600, 600))
         self.graphicsView_2.setObjectName("graphicsView_2")
-        # self.graphicsView_3 = GraphicsLayoutWidget(self.centralwidget)
-        self.graphicsView_3 = gl.GLViewWidget(self.centralwidget)
-        # self.graphicsView_3.setGeometry(QtCore.QRect(1290, 60, 600, 600))
+        self.graphicsView_3 = GraphicsLayoutWidget(self.centralwidget)
+        self.graphicsView_3.setGeometry(QtCore.QRect(1290, 60, 600, 600))
         self.graphicsView_3.setObjectName("graphicsView_3")
         self.label = QtWidgets.QLabel(self.centralwidget)
         self.label.setGeometry(QtCore.QRect(210, 20, 200, 30))
@@ -141,8 +125,6 @@ class Ui_MainWindow(object):
         self.label_3.setFont(font)
         self.label_3.setObjectName("label_3")
 
-        self.pd_btn = btn_class(self.centralwidget,"pd_btn",1375, 670, 90, 30)
-
         # self.label_4 = QtWidgets.QLabel(self.centralwidget)
         # self.label_4.setGeometry(QtCore.QRect(350, 670, 120, 30))
         # font = QtGui.QFont()
@@ -180,4 +162,4 @@ class Ui_MainWindow(object):
         self.pushButton_stop_record.setText(_translate("MainWindow", "Stop Record"))
         self.pushButton_save.setText(_translate("MainWindow", "Save"))
         self.pushButton_DCA.setText(_translate("MainWindow", "Connect DCA1000"))
-        self.pd_btn.btn.setText(_translate("MainWindow", "Point cloud"))
+
