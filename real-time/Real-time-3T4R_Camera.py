@@ -26,7 +26,7 @@ config = '../radar_config/xwr68xx_profile_2021_03_23T08_12_36_405.cfg'
 # config = '../radar_config/IWR1843_3d.cfg'
 # config = '../radar_config/xwr18xx_profile_2021_03_05T07_10_37_413.cfg'
 
-set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM10', BaudRate=115200)
+set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM13', BaudRate=115200)
 
 
 def send_cmd(code):
@@ -132,8 +132,8 @@ def openradar():
 def StartRecord():
     # processor.status = 1
     collector.status = 1
-    # cam1.status = 1
-    # cam2.status = 1
+    cam1.status = 1
+    cam2.status = 1
     print('Start Record Time:', (time.ctime(time.time())))
     print('=======================================')
 
@@ -141,8 +141,8 @@ def StartRecord():
 def StopRecord():
     # processor.status = 0
     collector.status = 0
-    # cam1.status = 0
-    # cam2.status = 0
+    cam1.status = 0
+    cam2.status = 0
     print('Stop Record Time:', (time.ctime(time.time())))
     print('=======================================')
 
@@ -168,7 +168,7 @@ def ConnectDca():
 def SelectFolder():
     root = tk.Tk()
     root.withdraw()
-    file_path = filedialog.asksaveasfilename(parent=root, initialdir='E:/ResearchData/ThuMouseData')
+    file_path = filedialog.asksaveasfilename(parent=root, initialdir='C:\\Users\\user\\Desktop\\ForAndy')
     return file_path
 
 
@@ -178,6 +178,8 @@ def SaveData():
     # sockConfig.sendto(send_cmd('6'), FPGA_address_cfg)
     # sockConfig.close()
     path = SelectFolder()
+    cam1.status = 0
+    cam2.status = 0
     if path:
         savefilename.setText('Save File Path & Name: ' + path)
         # name = savefilename.toPlainText()
@@ -193,20 +195,20 @@ def SaveData():
         np.save(path + '_rawdata', data_save)
         print('Radar File Size', np.shape(data_save)[0])
         print('=======================================')
-        # cam_save = []
-        # while not cam_rawData.empty():
-        #     tmp = cam_rawData.get()
-        #     cam_save.append(tmp)
-        # np.save(path + '_cam1', cam_save)
-        # print('Camera 1 File Size:', np.shape(cam_save)[0])
-        # print('=======================================')
-        # cam_save2 = []
-        # while not cam_rawData2.empty():
-        #     tmp = cam_rawData2.get()
-        #     cam_save2.append(tmp)
-        # np.save(path  + '_cam2', cam_save2)
-        # print('Camera 2 File Size:', np.shape(cam_save2)[0])
-        # print('=======================================')
+        cam_save = []
+        while not cam_rawData.empty():
+            tmp = cam_rawData.get()
+            cam_save.append(tmp)
+        np.save(path + '_cam1', cam_save)
+        print('Camera 1 File Size:', np.shape(cam_save)[0])
+        print('=======================================')
+        cam_save2 = []
+        while not cam_rawData2.empty():
+            tmp = cam_rawData2.get()
+            cam_save2.append(tmp)
+        np.save(path  + '_cam2', cam_save2)
+        print('Camera 2 File Size:', np.shape(cam_save2)[0])
+        print('=======================================')
         print('Save File Done')
         print('=======================================')
 
@@ -334,14 +336,14 @@ if __name__ == '__main__':
 
 
     lock = threading.Lock()
-    # cam1 = CamCapture(1, 'First', 1, lock, CAMData, cam_rawData, mode=1)
-    # cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1)
+    cam1 = CamCapture(1, 'First', 1, lock, CAMData, cam_rawData, mode=1)
+    cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1)
 
     collector = UdpListener('Listener', BinData, frame_length, address, buff_size, rawData)
     processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, 0, "0105", status=0)
 
-    # cam1.start()
-    # cam2.start()
+    cam1.start()
+    cam2.start()
     collector.start()
     processor.start()
     plotIMAGE = threading.Thread(target=plot())
@@ -351,8 +353,8 @@ if __name__ == '__main__':
     # sockConfig.close()
     collector.join(timeout=1)
     processor.join(timeout=1)
-    # cam1.close()
-    # cam2.close()
+    cam1.close()
+    cam2.close()
 
     print("Program Close")
     sys.exit()

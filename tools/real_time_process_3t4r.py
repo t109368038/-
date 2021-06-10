@@ -25,6 +25,7 @@ class UdpListener(th.Thread):
                         Socket buffer size
         """
         th.Thread.__init__(self, name=name)
+
         self.bin_data = bin_data
         self.frame_length = data_frame_length
         self.data_address = data_address
@@ -39,7 +40,7 @@ class UdpListener(th.Thread):
         # array for putting raw data
         np_data = []
         # count frame
-        count_frame = 0
+        self.count_frame = 0
         data_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         data_socket.bind(self.data_address)
         print("Create Data Socket Successfully")
@@ -51,16 +52,20 @@ class UdpListener(th.Thread):
             data = data[10:]
             np_data.extend(np.frombuffer(data, dtype=dt))
             # while np_data length exceeds frame length, do following
+
             if len(np_data) >= self.frame_length:
-                count_frame += 1
+
                 # print(self.frame_length)
                 # print("Frame No.", count_frame)
                 # put one frame data into bin data array
                 if self.status == 1:
-                    # print(self.status)
-
-                    # print("Frame No.", count_frame)
-                    self.save_data.put(np_data[0:self.frame_length])
+                    print("Frame No.", self.count_frame)
+                    if self.count_frame<64:
+                        self.save_data.put(np_data[0:self.frame_length])
+                        self.count_frame += 1
+                    else:
+                        self.status = 0
+                        self.count_frame = 0
                 self.bin_data.put(np_data[0:self.frame_length])
                 # remove one frame length data from array
                 np_data = np_data[self.frame_length:]
