@@ -39,11 +39,11 @@ def GetGroundTruth(x1, y1, x2, y2):
     return x2 * -1, y2, y1 * -1 #22cm
 
 
-def show_voxel(path):
+def show_voxel(pathm,cam_path):
 
     fig = plt.figure()
-    data = np.load(path+"point_cloud.npy",allow_pickle=True)
-    hand_pd_1, hand_pd_2 = load_gt(path)
+    data = np.load(path+"point_cloud_scr_moving_average_out_last.npy",allow_pickle=True)
+    hand_pd_1, hand_pd_2 = load_gt(cam_path)
     print(hand_pd_2.shape)
     out_radar_p = []
     out_cam_p = []
@@ -65,8 +65,9 @@ def show_voxel(path):
             Z = Z[8]/0.015
         else:
             X = int(np.round(X[8] / 0.015 + 12.5))
-            Y = int(np.round(Y[8] / 0.015 + 12.5 - 10))
+            Y = int(np.round(Y[8] / 0.015 + 12.5-20))
             Z = int(np.round(Z[8] / 0.015 + 12.5))
+            print(X, Y, Z)
 
             arr[X][Y][Z] = True
             colors[X][Y][Z] = "green"
@@ -107,11 +108,12 @@ def show_voxel(path):
                 colors[12][0][0] = 'blue'
                 arr[12][0][0] = True
                 ax = fig.add_subplot(projection='3d')
-                ax.view_init(elev=33., azim=45)
+                # ax.view_init(elev=33., azim=45)
+                ax.view_init(elev=4., azim=7)
                 ax.voxels(arr, facecolors=colors, edgecolor='k')
                 plt.draw()
                 plt.pause(0.001)
-
+                #
                 # plt.pause(100)
 
         print("=============================")
@@ -126,8 +128,8 @@ def show_voxel(path):
     # np.save('C:/Users/user/Desktop/thmouse_training_data/out_cam_p.npy', out_cam_p)
     # np.save('C:/Users/user/Desktop/thmouse_training_data/out_radar_p.npy', out_radar_p)
 
-def save_voxel(head_path):
-    data = np.load(head_path + "point_cloud.npy",allow_pickle=True)
+def save_voxel(head_path, save_path,load_file_name):
+    data = np.load(save_path + "point_cloud"+ str(load_file_name) +".npy",allow_pickle=True)
     out_radar_p = []
     out_center_p = []
 
@@ -159,11 +161,11 @@ def save_voxel(head_path):
         else:
             out_center_p.append([0,0,0])
         out_radar_p.append(arr)
-    np.save(head_path+"out_radar_p.npy", out_radar_p)
-    np.save(head_path+"out_center_p.npy", out_center_p)
+    np.save(save_path+"out_radar_p" +str(load_file_name)+".npy", out_radar_p)
+    np.save(save_path+"out_center_p"+str(load_file_name)+".npy", out_center_p)
     print("   voxel  process Done")
 
-def save_index_finger(path):
+def save_index_finger(path,save_path,savename):
     hand_pd_1, hand_pd_2 = load_gt(path)
 
     out_cam_p = []
@@ -179,7 +181,7 @@ def save_index_finger(path):
         print("ErrorRRRRRRRRRRR")
         print("-------------------------")
         print(e)
-    np.save(path + "out_cam_p.npy", out_cam_p)
+    np.save(save_path + "out_cam_p"+str(savename)+".npy", out_cam_p)
 
     ##========================================
 
@@ -223,7 +225,9 @@ def show_error():
 def show_len(x):
     print("len is :{}".format(len(x)))
 if __name__ == '__main__':
-    path = "C:/Users/user/Desktop/thmouse_training_data/circle/time1/"
-    show_voxel(path)
+    # path = "C:/Users/user/Desktop/thmouse_training_data/circle/time2/"
+    cam_path = "C:/Users/user/Desktop/thmouse_training_data/up/time2/"
+    path = "D:/thumouse_training_data/moving_average_out_last_range_test/up/time2/"
+    show_voxel(path,cam_path)
     # show_error()
     # save_voxel(path)

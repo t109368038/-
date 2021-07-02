@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import sys
 from mediapipe_proecss import _normalized_to_pixel_coordinates,larry_draw,plot_hand
 
-def save_mediapipe_point(path, mp_hands):
+def save_mediapipe_point(path, save_path, mp_hands):
     # =================
     hands = mp_hands.Hands(
         # static_image_mode=True,
@@ -51,7 +51,7 @@ def save_mediapipe_point(path, mp_hands):
         cv2.waitKey(30) #延迟
 
     if only_one == 0:
-        np.save(path + "cam_hp.npy", cam_hp)
+        np.save(save_path + "cam_hp.npy", cam_hp)
         print("   video 1 process Done")
 #----------------------------------------------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------

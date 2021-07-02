@@ -1,6 +1,7 @@
 import numpy as np
 import mmwave as mm
 from mmwave.dsp.utils import Window
+from mmwave.dsp.doppler_processing import separate_tx
 
 class DataProcessor_offline():
     def __init__(self):
@@ -29,6 +30,8 @@ class DataProcessor_offline():
         self.weight_matrix1 = np.zeros([181, 2], dtype=complex)
         self.out_matrix = np.zeros([1024, 181], dtype=complex)
         self.out_matrix1 = np.zeros([8192, 181], dtype=complex)
+        self.moving_list = []
+
         Fc = 60
         count = 0
         lambda_start = 3e8 / Fc
@@ -40,6 +43,36 @@ class DataProcessor_offline():
             self.weight_matrix[count, :] = np.exp(-1j * 2 * np.pi * beamforming_factor)
             self.weight_matrix1[count, :] = np.exp(-1j * 2 * np.pi * beamforming_factor1)
             count += 1
+
+    def frame_average(self,input ,reordering):
+        tmp = None
+        for i in range(len(input)):
+            if i ==0 :
+                tmp = input[i].transpose(reordering).mean(0)
+            else:
+                tmp +=input[i].transpose(reordering).mean(0)
+        tmp = tmp /len(input)
+        return tmp
+
+    def moving_average_clutter_reomval(self, input_val, moving_list,outframe_number):
+        axis = 0
+
+        reordering = np.arange(len(input_val.shape))
+        reordering[0] = axis
+        reordering[axis] = 0
+        # input_val = input_val.transpose(reordering)
+
+        # Apply static clutter removal
+        # tmp_mean = input_val.transpose(reordering).mean(0)
+        moving_list.append(input_val)
+
+        if len(moving_list) <10 :
+            return input_val
+        else:
+            self.mean = self.frame_average(moving_list,reordering)  #　keeping update the data
+            output_val = moving_list[outframe_number] - self.mean
+            moving_list.pop(0)
+            return output_val.transpose(reordering)
 
     def run_proecss(self,raw_data,RAI_mode,Sure_staic_RM,chirp):
         frame_count = 0
@@ -54,11 +87,16 @@ class DataProcessor_offline():
             assert radar_cube.shape == (
                 48, 4, 64), "[ERROR] Radar cube is not the correct shape!" #(numChirpsPerFrame, numRxAntennas, numADCSamples)
 
-            # (3) Doppler Processing
-            det_matrix, aoa_input = mm.dsp.doppler_processing(radar_cube, num_tx_antennas=3,
-                                                              clutter_removal_enabled=Sure_staic_RM,
-                                                              window_type_2d=Window.HANNING, accumulate=True)
 
+            fft2d_in = separate_tx(radar_cube, 3, vx_axis=1, axis=0)
+
+            fft2d_in = self.moving_average_clutter_reomval(fft2d_in ,self.moving_list,5)
+
+
+            # (3) Doppler Processing
+            det_matrix, aoa_input = mm.dsp.doppler_processing(fft2d_in, num_tx_antennas=3,
+                                                              clutter_removal_enabled=Sure_staic_RM,
+                                                              window_type_2d=Window.HANNING, accumulate=True,interleaved=False)
             det_matrix_vis = np.fft.fftshift(det_matrix, axes=1)
 
 
@@ -174,7 +212,8 @@ class DataProcessor_offline():
             # SNRThresholds2 = np.array([[0, 15], [10, 16], [0 , 20]])
             # SNRThresholds2 = np.array([[0, 20], [10, 0], [0 , 0]])
 
-            detObj2D = mm.dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 58, 55, # 64== numRangeBins
+            # detObj2D = mm.dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 58, 55, # 64== numRangeBins
+            detObj2D = mm.dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 64, 55, # 64== numRangeBins
                                                   range_resolution)
 
             azimuthInput = aoa_input[detObj2D['rangeIdx'], :, detObj2D['dopplerIdx']]
