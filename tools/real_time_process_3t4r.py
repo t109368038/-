@@ -60,7 +60,7 @@ class UdpListener(th.Thread):
                 # put one frame data into bin data array
                 if self.status == 1:
                     print("Frame No.", self.count_frame)
-                    if self.count_frame<64:
+                    if self.count_frame < 32:
                         self.save_data.put(np_data[0:self.frame_length])
                         self.count_frame += 1
                     else:
