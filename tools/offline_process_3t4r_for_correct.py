@@ -31,6 +31,7 @@ class DataProcessor_offline():
         self.out_matrix = np.zeros([1024, 181], dtype=complex)
         self.out_matrix1 = np.zeros([8192, 181], dtype=complex)
         self.moving_list = []
+        self.Y_last = 0
 
         Fc = 60
         count = 0
@@ -66,13 +67,37 @@ class DataProcessor_offline():
         # tmp_mean = input_val.transpose(reordering).mean(0)
         moving_list.append(input_val)
 
-        if len(moving_list) <10 :
+        if len(moving_list) <3 :
             return input_val
         else:
             self.mean = self.frame_average(moving_list,reordering)  #　keeping update the data
             output_val = moving_list[outframe_number] - self.mean
             moving_list.pop(0)
             return output_val.transpose(reordering)
+
+    def delay_filter_src(self, X, pre_Y, a_weight):
+        """
+        :param X: new frame input
+        :param pre_Y: last src_weight
+        :param a_weight: the weight to mulitply pre_y
+        :return: 1). after src process data
+                 2). the current src_weight to feed next frame
+        """
+        pre_Y = self.Y_last
+        axis = 0
+        reordering = np.arange(len(X.shape))
+        reordering[0] = axis
+        reordering[axis] = 0
+        tmp_mean = X.transpose(reordering).mean(0)
+        #
+        Y = (1 - a_weight) * tmp_mean + a_weight * pre_Y
+        #
+        # Y = tmp_mean + a_weight * pre_Y
+
+        output_val = X - Y
+        print(20 * np.log10(np.sum(np.abs(Y)) / np.sum(np.abs(tmp_mean))))
+        # print((np.sum(np.abs(Y))/np.sum(np.abs(tmp_mean))))
+        return output_val.transpose(reordering), Y
 
     def run_proecss(self,raw_data,RAI_mode,Sure_staic_RM,chirp):
         frame_count = 0
@@ -90,7 +115,8 @@ class DataProcessor_offline():
 
             fft2d_in = separate_tx(radar_cube, 3, vx_axis=1, axis=0)
 
-            fft2d_in = self.moving_average_clutter_reomval(fft2d_in ,self.moving_list,5)
+            fft2d_in = self.moving_average_clutter_reomval(fft2d_in ,self.moving_list,1)
+            # fft2d_in,self.Y_last = self.delay_filter_src(fft2d_in,self.Y_last,a_weight=0.8)
 
 
             # (3) Doppler Processing
@@ -212,8 +238,8 @@ class DataProcessor_offline():
             # SNRThresholds2 = np.array([[0, 15], [10, 16], [0 , 20]])
             # SNRThresholds2 = np.array([[0, 20], [10, 0], [0 , 0]])
 
-            # detObj2D = mm.dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 58, 55, # 64== numRangeBins
-            detObj2D = mm.dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 64, 55, # 64== numRangeBins
+            detObj2D = mm.dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 58, 55, # 64== numRangeBins
+            # detObj2D = mm.dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 64, 55, # 64== numRangeBins
                                                   range_resolution)
 
             azimuthInput = aoa_input[detObj2D['rangeIdx'], :, detObj2D['dopplerIdx']]
