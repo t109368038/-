@@ -42,7 +42,7 @@ def GetGroundTruth(x1, y1, x2, y2):
 def show_voxel(pathm,cam_path):
 
     fig = plt.figure()
-    data = np.load(path+"point_cloud_scr_moving_average_out_last.npy",allow_pickle=True)
+    data = np.load(path+"point_cloud_scr_transfer_0dot1.npy",allow_pickle=True)
     hand_pd_1, hand_pd_2 = load_gt(cam_path)
     print(hand_pd_2.shape)
     out_radar_p = []
@@ -59,13 +59,14 @@ def show_voxel(pathm,cam_path):
         ##===========image ground thurth=========
         X, Y, Z = GetGroundTruth(hand_pd_1[i * 2, :], hand_pd_1[i * 2 + 1, :],
                                  hand_pd_2[i * 2, :], hand_pd_2[i * 2 + 1, :])
+
         if sure_raw == True:
             X = X[8]/0.015
             Y = Y[8]/0.015
             Z = Z[8]/0.015
         else:
             X = int(np.round(X[8] / 0.015 + 12.5))
-            Y = int(np.round(Y[8] / 0.015 + 12.5-20))
+            Y = int(np.round(Y[8] / 0.015 - 10))
             Z = int(np.round(Z[8] / 0.015 + 12.5))
             print(X, Y, Z)
 
@@ -79,7 +80,7 @@ def show_voxel(pathm,cam_path):
                 x = tmp_frame[c][0]
                 y = tmp_frame[c][1]
                 z = tmp_frame[c][2]
-                print("x:{} y:{} z:{}".format(x, y, z))
+                # print("x:{} y:{} z:{}".format(x, y, z))
 
                 px += x
                 py += y
@@ -88,8 +89,12 @@ def show_voxel(pathm,cam_path):
                 empty = False
 
             else:
+                # print("x:{} y:{} z:{}".format(tmp_frame[c][0] / 0.009 , tmp_frame[c][1] / 0.009 , tmp_frame[c][2] / 0.009 ))
+
                 x = round(tmp_frame[c][0] / 0.015 + 12.5)
-                y = round(tmp_frame[c][1] / 0.015 + 12.5 - 10)
+                # x = round(tmp_frame[c][0] / 0.015 )
+                y = round(tmp_frame[c][1] / 0.015 )
+                # z = round(tmp_frame[c][2] / 0.015 )
                 z = round(tmp_frame[c][2] / 0.015 + 12.5)
 
                 empty = False
@@ -109,12 +114,12 @@ def show_voxel(pathm,cam_path):
                 arr[12][0][0] = True
                 ax = fig.add_subplot(projection='3d')
                 # ax.view_init(elev=33., azim=45)
-                ax.view_init(elev=4., azim=7)
+                ax.view_init(elev=78, azim=90)
                 ax.voxels(arr, facecolors=colors, edgecolor='k')
                 plt.draw()
-                plt.pause(0.001)
-                #
-                # plt.pause(100)
+                # plt.pause(0.001)
+
+                plt.pause(1)
 
         print("=============================")
 
@@ -191,7 +196,7 @@ def show_error():
     show_len(out_cam_p)
     show_len(out_radar_p)
     total_len = range(len(out_cam_p))
-    fig = plt.figure()
+    # fig = plt.figure()
     plt.subplot(3, 1, 1)
     tmp_1 = np.mean(out_cam_p)
     tmp_2 = np.mean(out_radar_p)
@@ -226,8 +231,8 @@ def show_len(x):
     print("len is :{}".format(len(x)))
 if __name__ == '__main__':
     # path = "C:/Users/user/Desktop/thmouse_training_data/circle/time2/"
-    cam_path = "C:/Users/user/Desktop/thmouse_training_data/up/time2/"
-    path = "D:/thumouse_training_data/moving_average_out_last_range_test/up/time2/"
+    cam_path = "C:/Users/user/Desktop/thmouse_training_data/right/time2/"
+    path = "D:/thumouse_training_data/transfer_0dot1/circle/time2/"
     show_voxel(path,cam_path)
     # show_error()
     # save_voxel(path)

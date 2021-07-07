@@ -33,8 +33,9 @@ class DataProcesser():
 if __name__ == '__main__':
     mp_drawing = mp.solutions.drawing_utils
     mp_hands = mp.solutions.hands
-    name = "moving_average3_out_mid"
+    name = "transfer_1"
     Gesture = ["circle", "eight", "rectangle", "up", "down", "left", "right"]
+    # Gesture = ["circle"]
     head_path = 'C:/Users/user/Desktop/thmouse_training_data/'
     save_path = 'D:/thumouse_training_data/'+name+'/'
     static_romve = False
@@ -50,7 +51,6 @@ if __name__ == '__main__':
     # save_index_finger(tmp_path)
 
 #------------ for loop test ------------
-
     for i in Gesture:
         for j in range(2,4):
             tmp_path = head_path + i + "/time" + str(j) + "/"

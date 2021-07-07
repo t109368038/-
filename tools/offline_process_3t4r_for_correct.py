@@ -95,7 +95,7 @@ class DataProcessor_offline():
         # Y = tmp_mean + a_weight * pre_Y
 
         output_val = X - Y
-        print(20 * np.log10(np.sum(np.abs(Y)) / np.sum(np.abs(tmp_mean))))
+        # print(20 * np.log10(np.sum(np.abs(Y)) / np.sum(np.abs(tmp_mean))))
         # print((np.sum(np.abs(Y))/np.sum(np.abs(tmp_mean))))
         return output_val.transpose(reordering), Y
 
@@ -103,7 +103,8 @@ class DataProcessor_offline():
         frame_count = 0
         while True:
 
-            range_resolution, bandwidth = mm.dsp.range_resolution(128)
+            range_resolution, bandwidth = mm.dsp.range_resolution(64, 2000, 121.134)
+            # print(range_resolution,bandwidth)
             doppler_resolution = mm.dsp.doppler_resolution(bandwidth, 60, 33.02, 9.43, 16, 3)
 
             raw_data = np.reshape(raw_data,[-1,4,64])
@@ -114,9 +115,9 @@ class DataProcessor_offline():
 
 
             fft2d_in = separate_tx(radar_cube, 3, vx_axis=1, axis=0)
-
-            fft2d_in = self.moving_average_clutter_reomval(fft2d_in ,self.moving_list,1)
-            # fft2d_in,self.Y_last = self.delay_filter_src(fft2d_in,self.Y_last,a_weight=0.8)
+            #
+            # fft2d_in = self.moving_average_clutter_reomval(fft2d_in ,self.moving_list,1)
+            fft2d_in,self.Y_last = self.delay_filter_src(fft2d_in,self.Y_last,a_weight=1)
 
 
             # (3) Doppler Processing
@@ -238,9 +239,9 @@ class DataProcessor_offline():
             # SNRThresholds2 = np.array([[0, 15], [10, 16], [0 , 20]])
             # SNRThresholds2 = np.array([[0, 20], [10, 0], [0 , 0]])
 
-            detObj2D = mm.dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 58, 55, # 64== numRangeBins
-            # detObj2D = mm.dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 64, 55, # 64== numRangeBins
-                                                  range_resolution)
+            # detObj2D = mm.dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2, 58, 55, # 64== numRangeBins
+            detObj2D = mm.dsp.range_based_pruning(detObj2D, SNRThresholds2, peakValThresholds2,64, 55, # 64== numRangeBins
+                                                      range_resolution)
 
             azimuthInput = aoa_input[detObj2D['rangeIdx'], :, detObj2D['dopplerIdx']]
 
