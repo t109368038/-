@@ -5,15 +5,21 @@ import DSP_2t4r
 from matplotlib.colors import ListedColormap
 
 chirp_num = 32
+chirp_num = 16
 tx_num = 2
+tx_num = 3
 adc_sample = 64
 # data = np.load('../data/0109/0105new122.npy')
-data = np.load('../data/0112/0105new958.npy')
+data2= np.load('../data/0112/0105new958.npy')
+data = np.load('E:/NTUT-master/Result/IWR6843 Gesture/gesture3.npy')
+data = np.reshape(data, [-1, 4])
 data = data[:, 0:2:] + 1j * data[:, 2::]
+data = np.reshape(data, [100, 16, 3, 4, 64])
+data = data[33]
 data = np.reshape(data, [chirp_num * tx_num, -1, adc_sample])
 data = data.transpose([0, 2, 1])
-ch1_data = data[0: 64: 2, :, :]
-ch3_data = data[1: 64: 2, :, :]
+ch1_data = data[0: 48: 3, :, :]
+ch3_data = data[1: 48: 3, :, :]
 data = np.concatenate([ch1_data, ch3_data], axis=2)
 
 
@@ -21,14 +27,14 @@ w = np.hanning(data.shape[1])
 new_w = np.array([w, w, w, w, w, w, w, w])
 
 
-single_chirp = data[20, :, :]
+single_chirp = data[0, :, :]
 # single_chirp = data[12, :, :]
 tmp_data = new_w.T * single_chirp
 rdi = np.fft.fft(tmp_data, 256, axis=0)
 
 pos = [0, 0.002, 0.004, 0.006, 0.008, 0.01, 0.012, 0.014]
-
-
+d = 3e8 / 62e9
+pos = np.arange(8) * d * 0.5
 rdi_raw, rdi_fft = DSP_2t4r.Range_Doppler(data, 2, [128, 64])
 rai_fft = DSP_2t4r.Range_Angle(data, 1, [128, 64, 32])
 
@@ -37,15 +43,15 @@ rai_bartlett = np.zeros([128, 64, 181], dtype=np.complex)
 
 rdi = np.flip(rdi, axis=0)
 
-# for i in range(128):
-#     for j in range(64):
-#         rai_bartlett[i, j, :] = ar.bf.music(rdi_raw[i, j, :].T, 77e9, steering)
-# rai_bartlett = np.abs(rai_bartlett)
-# r = ar.bf.bartlett(rdi_raw[32, :].T, 77e9, steering)
+for i in range(128):
+    for j in range(64):
+        rai_bartlett[i, j, :] = ar.bf.music(rdi_raw[i, j, :].T, 62e9, steering)
+rai_bartlett = np.abs(rai_bartlett)
+r = ar.bf.bartlett(rdi_raw[32, :].T, 77e9, steering)
 
-rai = ar.bf.bartlett(rdi[10, :].T, 77e9, steering)
+# rai = ar.bf.bartlett(rdi[10, :].T, 77e9, steering)
 # rai = ar.bf.capon(rdi[32, :].T, 79e9, steering)
-# rai = ar.bf.music(rdi[32, :].T, 81e9, steering)
+rai = ar.bf.music(rdi[32, :].T, 81e9, steering)
 
 
 # my beamforming
@@ -119,13 +125,13 @@ new_cmp = ListedColormap(colors)
 # plt.imshow(np.flip(np.rot90(rai_fft[0, :, :], -2)[36:63], axis=1), cmap=new_cmp) #, vmin=1e3, vmax=1e5
 # # plt.plot(rai_fft)
 
-
-plt.figure(3)
-plt.plot(rai)
-plt.title('(AOA)Bartlett Beamforming')
+#
+# plt.figure(3)
+# plt.plot(rai)
+# plt.title('(AOA)Bartlett Beamforming')
 # plt.xticks([0, 45, 60, 90, 120, 135, 180], ['-90', '-45', '-30', '0', '30', '45', '90'])
 # plt.imshow(my_bf[0, 36:63, :], cmap=new_cmp)
-plt.show()
+# plt.show()
 #
 # plt.figure(4)
 # plt.plot(rai)
@@ -136,12 +142,13 @@ plt.show()
 
 
 
-# plt.figure(5)
-# plt.plot(rai)
-# plt.title('(AOA)MUSIC')
-# plt.xticks([0, 45, 60, 90, 120, 135, 180], ['-90', '-45', '-30', '0', '30', '45', '90'])
-# # plt.imshow(np.flip(rai_bartlett[0, :, :], axis=[0, 1]))
-# plt.show()
+plt.figure(5)
+plt.plot(rai)
+plt.title('(AOA)MUSIC')
+plt.xticks([0, 45, 60, 90, 120, 135, 180], ['-90', '-45', '-30', '0', '30', '45', '90'])
+plt.imshow(np.flip(rai_bartlett.sum(0), axis=[0, 1]))
+# plt.imshow(np.flip(rai_bartlett[0, :, :], axis=[0, 1]))
+plt.show()
 
 
 

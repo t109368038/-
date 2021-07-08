@@ -214,19 +214,20 @@ class DataProcessor(th.Thread):
             #         aa[range_index[t], doppler_index[t]] = 250
             self.rdi_queue.put(aa)
 
-            #
-            # azimuthInput = aoa_input[detObj2D['rangeIdx'], :, detObj2D['dopplerIdx']]
-            # # print(azimuthInput)
-            # x, y, z = mm.dsp.naive_xyz(azimuthInput.T)
-            # xyzVecN = np.zeros((3, x.shape[0]))
-            # xyzVecN[0] = x * range_resolution * detObj2D['rangeIdx']
-            # xyzVecN[1] = y * range_resolution * detObj2D['rangeIdx']
-            # xyzVecN[2] = z * range_resolution * detObj2D['rangeIdx']
-            #
-            #
-            # Psi, Theta, Ranges, xyzVec = mm.dsp.beamforming_naive_mixed_xyz(azimuthInput, detObj2D['rangeIdx'],
-            #                                                          range_resolution, method='Bartlett')
-            #
+
+            azimuthInput = aoa_input[detObj2D['rangeIdx'], :, detObj2D['dopplerIdx']]
+            # print(azimuthInput)
+            x, y, z = mm.dsp.naive_xyz(azimuthInput.T)
+            xyzVecN = np.zeros((3, x.shape[0]))
+            xyzVecN[0] = x * range_resolution * detObj2D['rangeIdx']
+            xyzVecN[1] = y * range_resolution * detObj2D['rangeIdx']
+            xyzVecN[2] = z * range_resolution * detObj2D['rangeIdx']
+
+
+            Psi, Theta, Ranges, xyzVec = mm.dsp.beamforming_naive_mixed_xyz(azimuthInput, detObj2D['rangeIdx'],
+                                                                     range_resolution, method='Bartlett')
+
+
             # # (5) 3D-Clustering
             # # detObj2D must be fully populated and completely accurate right here
             # numDetObjs = detObj2D.shape[0]
