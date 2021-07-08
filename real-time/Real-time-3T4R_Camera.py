@@ -16,6 +16,7 @@ import time
 import sys
 import socket
 import cv2
+import pyqtgraph.opengl as gl
 
 # -----------------------------------------------
 from app_layout_2t4r import Ui_MainWindow
@@ -98,10 +99,14 @@ def update_figure():
         # ang_cuv.setData(rd[:, :, 0].sum(1))
 
     if not RAIData.empty():
-        xx = RAIData.get()[:, :, :].sum(0)
+        # xx = RAIData.get()[:, :, :].sum(0)
+
+        pd = RAIData.get()
+        pos = np.transpose(pd, [1, 0])
+        p13d.setData(pos=pos[:, :3], color=[1, 0.35, 0.02, 1], pxMode=True)
         # img_rai.setImage((np.fliplr(np.flip(xx[36:-1,:], axis=0)).T))
 
-        img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T)
+        # img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T)
         # np.save('../data/0105/rai_new' + str(count), xx[36:-1, :])
 
         # img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T, levels=[1.2e4, 4e6])
@@ -179,7 +184,7 @@ def SaveData():
     # sockConfig.close()
     path = SelectFolder()
     cam1.status = 0
-    cam2.status = 0
+    # cam2.status = 0
     if path:
         savefilename.setText('Save File Path & Name: ' + path)
         # name = savefilename.toPlainText()
@@ -222,7 +227,7 @@ def SaveData():
 
 
 def plot():
-    global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename
+    global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename, p13d
     # ---------------------------------------------------
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
@@ -233,7 +238,8 @@ def plot():
     ui.setupUi(MainWindow)
     view_rdi = ui.graphicsView.addViewBox()
     view_rai = ui.graphicsView_2.addViewBox()
-    view_cam = ui.graphicsView_3.addViewBox()
+    # view_cam = ui.graphicsView_3.addViewBox()
+    view_pd = ui.graphicsView_3
 
     # view_angCurve = ui.graphicsView_3.addViewBox()
 
@@ -252,7 +258,7 @@ def plot():
     # view_cam.setAspectLocked(True)
     img_rdi = pg.ImageItem(border='w')
     img_rai = pg.ImageItem(border='w')
-    img_cam = pg.ImageItem(border='w')
+    # img_cam = pg.ImageItem(border='w')
     # ang_cuv = pg.PlotDataItem(tmp_data, pen='r')
     # Colormap
     position = np.arange(64)
@@ -286,8 +292,28 @@ def plot():
     img_rai.setLookupTable(lookup_table)
     view_rdi.addItem(img_rdi)
     view_rai.addItem(img_rai)
-    view_cam.addItem(img_cam)
+    # view_cam.addItem(img_cam)
     # view_angCurve.addItem(ang_cuv)
+
+    xgrid = gl.GLGridItem()
+    ygrid = gl.GLGridItem()
+    zgrid = gl.GLGridItem()
+    view_pd.addItem(xgrid)
+    view_pd.addItem(ygrid)
+    view_pd.addItem(zgrid)
+    xgrid.translate(0, 10, -10)
+    ygrid.translate(0, 0, 0)
+    zgrid.translate(0, 10, -10)
+    xgrid.rotate(90, 0, 1, 0)
+    ygrid.rotate(90, 1, 0, 0)
+
+    p13d = gl.GLScatterPlotItem(pos=np.zeros([1, 3]), color=[50, 50, 50, 255])
+    origin = gl.GLScatterPlotItem(pos=np.zeros([1, 3]), color=[255, 0, 0, 255])
+    coord = gl.GLAxisItem(glOptions="opaque")
+    coord.setSize(10, 10, 10)
+    view_pd.addItem(p13d)
+    view_pd.addItem(coord)
+    view_pd.addItem(origin)
 
     # Set initial view bounds
     view_rdi.setRange(QtCore.QRectF(-5, 0, 140, 80))

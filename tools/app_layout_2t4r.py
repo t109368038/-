@@ -11,6 +11,9 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QTextEdit
 from pyqtgraph import GraphicsLayoutWidget
+import pyqtgraph.opengl as gl
+
+
 
 class Ui_MainWindow(object):
 
@@ -30,9 +33,15 @@ class Ui_MainWindow(object):
         self.graphicsView_2 = GraphicsLayoutWidget(self.centralwidget)
         self.graphicsView_2.setGeometry(QtCore.QRect(660, 60, 600, 600))
         self.graphicsView_2.setObjectName("graphicsView_2")
-        self.graphicsView_3 = GraphicsLayoutWidget(self.centralwidget)
+        # self.graphicsView_3 = GraphicsLayoutWidget(self.centralwidget)
+        # self.graphicsView_3.setGeometry(QtCore.QRect(1290, 60, 600, 600))
+        # self.graphicsView_3.setObjectName("graphicsView_3")
+
+        self.graphicsView_3 = gl.GLViewWidget(self.centralwidget)
         self.graphicsView_3.setGeometry(QtCore.QRect(1290, 60, 600, 600))
         self.graphicsView_3.setObjectName("graphicsView_3")
+
+
         self.label = QtWidgets.QLabel(self.centralwidget)
         self.label.setGeometry(QtCore.QRect(210, 20, 200, 30))
         font = QtGui.QFont()
@@ -52,6 +61,16 @@ class Ui_MainWindow(object):
         font.setWeight(75)
         self.label_2.setFont(font)
         self.label_2.setObjectName("label_2")
+
+        self.label_6 = QtWidgets.QLabel(self.centralwidget)
+        self.label_6.setGeometry(QtCore.QRect(1470, 20, 200, 30))
+        font = QtGui.QFont()
+        font.setFamily("微軟正黑體 Light")
+        font.setPointSize(14)
+        font.setBold(True)
+        font.setWeight(75)
+        self.label_6.setFont(font)
+        self.label_6.setObjectName("label_6")
 
         self.pushButton_exit = QtWidgets.QPushButton(self.centralwidget)
         self.pushButton_exit.setGeometry(QtCore.QRect(1270, 670, 90, 30))
@@ -156,6 +175,7 @@ class Ui_MainWindow(object):
         self.label.setText(_translate("MainWindow", "Range-Doppler Image"))
         self.label_2.setText(_translate("MainWindow", "Range-Angle Image"))
         self.label_3.setText(_translate("MainWindow", "Save File Path & Name:"))
+        self.label_6.setText(_translate("MainWindow", "Point Cloud"))
         self.pushButton_exit.setText(_translate("MainWindow", "Exit"))
         self.pushButton_record.setText(_translate("MainWindow", "Record"))
         self.pushButton_start.setText(_translate("MainWindow", "Send Radar Config"))

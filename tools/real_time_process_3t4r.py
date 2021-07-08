@@ -224,9 +224,9 @@ class DataProcessor(th.Thread):
             xyzVecN[2] = z * range_resolution * detObj2D['rangeIdx']
 
 
-            Psi, Theta, Ranges, xyzVec = mm.dsp.beamforming_naive_mixed_xyz(azimuthInput, detObj2D['rangeIdx'],
-                                                                     range_resolution, method='Bartlett')
-
+            Psi, Theta, Ranges, velocity, xyzVec = mm.dsp.beamforming_naive_mixed_xyz(azimuthInput, detObj2D['rangeIdx'], detObj2D['dopplerIdx'],
+                                                                            range_resolution, method='Bartlett')
+            self.rai_queue.put(xyzVec)
 
             # # (5) 3D-Clustering
             # # detObj2D must be fully populated and completely accurate right here
