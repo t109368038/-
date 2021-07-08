@@ -213,20 +213,20 @@ class DataProcessor(th.Thread):
             #     for t in range(len(np.shape(detObj2D))):
             #         aa[range_index[t], doppler_index[t]] = 250
             self.rdi_queue.put(aa)
+            #
+            #
+            # azimuthInput = aoa_input[detObj2D['rangeIdx'], :, detObj2D['dopplerIdx']]
+            # # print(azimuthInput)
+            # x, y, z = mm.dsp.naive_xyz(azimuthInput.T)
+            # xyzVecN = np.zeros((3, x.shape[0]))
+            # xyzVecN[0] = x * range_resolution * detObj2D['rangeIdx']
+            # xyzVecN[1] = y * range_resolution * detObj2D['rangeIdx']
+            # xyzVecN[2] = z * range_resolution * detObj2D['rangeIdx']
+            #
 
-
-            azimuthInput = aoa_input[detObj2D['rangeIdx'], :, detObj2D['dopplerIdx']]
-            # print(azimuthInput)
-            x, y, z = mm.dsp.naive_xyz(azimuthInput.T)
-            xyzVecN = np.zeros((3, x.shape[0]))
-            xyzVecN[0] = x * range_resolution * detObj2D['rangeIdx']
-            xyzVecN[1] = y * range_resolution * detObj2D['rangeIdx']
-            xyzVecN[2] = z * range_resolution * detObj2D['rangeIdx']
-
-
-            Psi, Theta, Ranges, velocity, xyzVec = mm.dsp.beamforming_naive_mixed_xyz(azimuthInput, detObj2D['rangeIdx'], detObj2D['dopplerIdx'],
-                                                                            range_resolution, method='Bartlett')
-            self.rai_queue.put(xyzVec)
+            # Psi, Theta, Ranges, velocity, xyzVec = mm.dsp.beamforming_naive_mixed_xyz(azimuthInput, 63 - detObj2D['rangeIdx'], detObj2D['dopplerIdx'],
+            #                                                                 range_resolution, method='Bartlett')
+            # self.rai_queue.put(xyzVec) #Output Point Cloud
 
             # # (5) 3D-Clustering
             # # detObj2D must be fully populated and completely accurate right here
