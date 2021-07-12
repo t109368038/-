@@ -153,7 +153,6 @@ class DataProcessor(th.Thread):
                                                               clutter_removal_enabled=False)
 
 
-
             # (4) Object Detection
             fft2d_sum = det_matrix.astype(np.int64)
             thresholdDoppler, noiseFloorDoppler = np.apply_along_axis(func1d=mm.dsp.ca_,
@@ -222,9 +221,9 @@ class DataProcessor(th.Thread):
             xyzVecN[0] = x * range_resolution * detObj2D['rangeIdx']
             xyzVecN[1] = y * range_resolution * detObj2D['rangeIdx']
             xyzVecN[2] = z * range_resolution * detObj2D['rangeIdx']
-            Psi, Theta, Ranges, velocity, xyzVec = mm.dsp.beamforming_naive_mixed_xyz(azimuthInput, 63 - detObj2D['rangeIdx'], detObj2D['dopplerIdx'],
-                                                                            range_resolution, method='Bartlett')
-            self.rai_queue.put(xyzVec) #Output Point Cloud
+            # Psi, Theta, Ranges, velocity, xyzVec = mm.dsp.beamforming_naive_mixed_xyz(azimuthInput, 63 - detObj2D['rangeIdx'], detObj2D['dopplerIdx'],
+            #                                                                 range_resolution, method='Bartlett')
+            # self.rai_queue.put(xyzVec) #Output Point Cloud
 
             # # (5) 3D-Clustering
             # # detObj2D must be fully populated and completely accurate right here

@@ -137,7 +137,7 @@ def openradar():
 def StartRecord():
     # processor.status = 1
     collector.status = 1
-    cam1.status = 1
+    # cam1.status = 1
     # cam2.status = 1
     print('Start Record Time:', (time.ctime(time.time())))
     print('=======================================')
@@ -146,7 +146,7 @@ def StartRecord():
 def StopRecord():
     # processor.status = 0
     collector.status = 0
-    cam1.status = 0
+    # cam1.status = 0
     # cam2.status = 0
     print('Stop Record Time:', (time.ctime(time.time())))
     print('=======================================')
@@ -183,7 +183,7 @@ def SaveData():
     # sockConfig.sendto(send_cmd('6'), FPGA_address_cfg)
     # sockConfig.close()
     path = SelectFolder()
-    cam1.status = 0
+    # cam1.status = 0
     # cam2.status = 0
     if path:
         savefilename.setText('Save File Path & Name: ' + path)
@@ -361,14 +361,14 @@ if __name__ == '__main__':
     # sockConfig.bind(config_address)
 
 
-    lock = threading.Lock()
-    cam1 = CamCapture(1, 'First', 1, lock, CAMData, cam_rawData, mode=1)
+    # lock = threading.Lock()
+    # cam1 = CamCapture(1, 'First', 1, lock, CAMData, cam_rawData, mode=1)
     # cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1)
 
     collector = UdpListener('Listener', BinData, frame_length, address, buff_size, rawData)
     processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, 0, "0105", status=0)
 
-    cam1.start()
+    # cam1.start()
     # cam2.start()
     collector.start()
     processor.start()
@@ -379,7 +379,7 @@ if __name__ == '__main__':
     # sockConfig.close()
     collector.join(timeout=1)
     processor.join(timeout=1)
-    cam1.close()
+    # cam1.close()
     # cam2.close()
 
     print("Program Close")
