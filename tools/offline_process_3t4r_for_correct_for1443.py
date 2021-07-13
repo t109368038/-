@@ -6,7 +6,8 @@ from mmwave.dsp.doppler_processing import separate_tx
 class DataProcessor_offline():
     def __init__(self):
         """
-        :param name: str                        Object name
+        :param name: str
+                        Object name
 
         :param config: sequence of ints
                         Radar config in the order
@@ -110,7 +111,7 @@ class DataProcessor_offline():
             # print(np.shape(raw_data))
             radar_cube = mm.dsp.range_processing(raw_data, window_type_1d=Window.HANNING)
             assert radar_cube.shape == (
-                48, 4, 64), "[ERROR] Radar cube is not the correct shape!" #(numChirpsPerFrame, numRxAntennas, numADCSamples)
+                96, 4, 64), "[ERROR] Radar cube is not the correct shape!" #(numChirpsPerFrame, numRxAntennas, numADCSamples)
 
 
             fft2d_in = separate_tx(radar_cube, 3, vx_axis=1, axis=0)

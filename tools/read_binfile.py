@@ -64,6 +64,7 @@ def read_bin_file(file_name, config, mode=0, header=True, packet_num=1443):
     else:
         data = np.fromfile(file_name, dtype=np.int16)
 
+
     frame = config[0]
     sample = config[1]
     chirp = config[2]
