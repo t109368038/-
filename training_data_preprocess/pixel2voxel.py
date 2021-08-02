@@ -5,12 +5,13 @@ from mpl_toolkits.mplot3d import Axes3D # <--- This is important for 3d plotting
 
 def load_gt(path):
     # path = 'C:/Users/user/Desktop/thmouse_training_data/'
-    hand_pd_1 = np.load(path + "cam_hp.npy", allow_pickle=True)
+    hand_pd_1 = np.load(path + "cam_hp1.npy", allow_pickle=True)
     print("self.hand_pd_1 len is {}".format(hand_pd_1.shape))
-    hand_pd_2 = np.load(path + "cam_hp1.npy", allow_pickle=True)
+    hand_pd_2 = np.load(path + "cam_hp.npy", allow_pickle=True)
     print("self.hand_pd_2 len is {}".format(hand_pd_2.shape))
 
     return  hand_pd_1,hand_pd_2
+
 
 def GetGroundTruth(x1, y1, x2, y2):
     scale_x1 = 56 / 640 * 0.015  # cm / pixel * (0.015 point/cm)
@@ -34,15 +35,15 @@ def GetGroundTruth(x1, y1, x2, y2):
     y2 = y2.astype(np.double)
     y2 = (y2 * scale_y2)
     y2 = (y2 * -1) + ((480 * scale_y2))
-
     y2 = np.round(y2, 3)
+
     return x2 * -1, y2, y1 * -1 #22cm
 
 
-def show_voxel(pathm,cam_path):
+def show_voxel(path,cam_path):
 
     fig = plt.figure()
-    data = np.load(path+"point_cloud_scr_transfer_0dot1.npy",allow_pickle=True)
+    data = np.load(path+"point_cloud_scr_transfer_0dot5.npy",allow_pickle=True)
     hand_pd_1, hand_pd_2 = load_gt(cam_path)
     print(hand_pd_2.shape)
     out_radar_p = []
@@ -113,13 +114,13 @@ def show_voxel(pathm,cam_path):
                 colors[12][0][0] = 'blue'
                 arr[12][0][0] = True
                 ax = fig.add_subplot(projection='3d')
-                # ax.view_init(elev=33., azim=45)
-                ax.view_init(elev=78, azim=90)
+                ax.view_init(elev=33., azim=45)
+                # ax.view_init(elev=78, azim=90)
                 ax.voxels(arr, facecolors=colors, edgecolor='k')
                 plt.draw()
                 # plt.pause(0.001)
 
-                plt.pause(1)
+                plt.pause(0.5)
 
         print("=============================")
 
@@ -231,8 +232,10 @@ def show_len(x):
     print("len is :{}".format(len(x)))
 if __name__ == '__main__':
     # path = "C:/Users/user/Desktop/thmouse_training_data/circle/time2/"
-    cam_path = "C:/Users/user/Desktop/thmouse_training_data/right/time2/"
-    path = "D:/thumouse_training_data/transfer_0dot1/circle/time2/"
+    # cam_path = "C:/Users/user/Desktop/thmouse_training_data/right/time2/"
+    # path = "D:/thumouse_training_data/transfer_0dot2/circle/time2/"
+    path = "D:/thumouse_new_dataset_32_32/transfer_0dot5/circle/time3/"
+    cam_path = "D:/thumouse_new_dataset_32_32/transfer_0dot5/circle/time3/"
     show_voxel(path,cam_path)
     # show_error()
     # save_voxel(path)

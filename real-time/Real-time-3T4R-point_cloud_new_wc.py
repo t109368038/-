@@ -77,7 +77,7 @@ class Realtime_sys():
         # self.collector.quit()
         # self.collector.data_socket.close()
         set_radar.StopRadar()
-        # self.ConnectDca1000()
+        # self.C onnectDca1000()
         # adc_sample = 64
         # chirp = 16
         # tx_num = 3

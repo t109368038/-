@@ -1,7 +1,7 @@
 import numpy as np
 import mediapipe as mp
 from offline_process_3t4r_for_correct import DataProcessor_offline
-from training_data_preprocess.pixel2voxel import save_voxel,save_index_finger
+from training_data_preprocess.pixel2voxel_32 import save_voxel,save_index_finger
 from training_data_preprocess.meidipipe_run_by_vedio import save_mediapipe_point
 
 
@@ -33,12 +33,14 @@ class DataProcesser():
 if __name__ == '__main__':
     mp_drawing = mp.solutions.drawing_utils
     mp_hands = mp.solutions.hands
-    name = "transfer_1"
+    name = "transfer_0dot5"
+
     Gesture = ["circle", "eight", "rectangle", "up", "down", "left", "right"]
-    # Gesture = ["circle"]
     head_path = 'C:/Users/user/Desktop/thmouse_training_data/'
-    save_path = 'D:/thumouse_training_data/'+name+'/'
+    # head_path = 'C:/Users/user/Desktop/thumouse_dataset_index_Enhance/'
+    save_path = 'D:/thumouse_old_dataset_32_32/'+name+'/'
     static_romve = False
+
 #------------ for single test ------------
     # # tmp_path = head_path + Gesture[6] + "/time" + str(3) + "/"
     # tmp_path = "C:/Users/user/Desktop/thmouse_training_data/"
@@ -52,14 +54,15 @@ if __name__ == '__main__':
 
 #------------ for loop test ------------
     for i in Gesture:
+        # for j in range(2,3):
+        # for j in range(3,4):
         for j in range(2,4):
             tmp_path = head_path + i + "/time" + str(j) + "/"
             savepath = save_path + i + "/time" + str(j) + "/"
-            print(tmp_path)
+            # print(tmp_path)
             data_proecsss = DataProcesser(static_romve)
             data_proecsss.load_raw_radar_data(file_path=tmp_path, save_path=savepath)
             data_proecsss.run("_scr_"+ name)
-            # save_mediapipe_point(tmp_path, savepath, mp_hands) # produce cam_hp.npy cam_hp1.npy
+            save_mediapipe_point(tmp_path, savepath, mp_hands) # produce cam_hp.npy cam_hp1.npy
             save_voxel(tmp_path ,savepath,"_scr_"+ name)
-            save_index_finger(tmp_path,savepath,"_scr_"+ name)  # out_cam_p.py
-
+            save_index_finger(savepath,savepath,"_scr_"+ name)  # out_cam_p.py

@@ -13,6 +13,8 @@ import sys
 from mediapipe_proecss import _normalized_to_pixel_coordinates,larry_draw,plot_hand
 
 def save_mediapipe_point(path, save_path, mp_hands):
+    mp_drawing = mp.solutions.drawing_utils
+
     # =================
     hands = mp_hands.Hands(
         # static_image_mode=True,
@@ -40,9 +42,11 @@ def save_mediapipe_point(path, save_path, mp_hands):
             if results.multi_hand_landmarks :
                 for hand_landmarks in results.multi_hand_landmarks:
                     x1, y1 = larry_draw(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+                    mp_drawing.draw_landmarks(
+                        frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
             else:
                 frame_lose +=1
-
+            # cv2.imshow('frame0', frame)
             cam_hp = cam_hp + [x1, y1]
             passframe += 1
 
@@ -83,16 +87,19 @@ def save_mediapipe_point(path, save_path, mp_hands):
             if results1.multi_hand_landmarks :
                 for hand_landmarks in results1.multi_hand_landmarks:
                     x2, y2 = larry_draw(frame1, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+                    mp_drawing.draw_landmarks(
+                        frame1, hand_landmarks, mp_hands.HAND_CONNECTIONS)
             else:
                 frame1_lose +=1
-                x2 = None
-                y2 = None
+                x2 = np.zeros([21])
+                y2 = np.zeros([21])
 
+            # cv2.imshow('frame1',frame1)
             cam1_hp = cam1_hp + [x2, y2]
         success1, frame1 = videoCapture1.read()
         cv2.waitKey(30) #延迟
 
     if only_one == 1:
-        np.save(path + "cam_hp1.npy",cam1_hp)
-        print("   video 1 process Done")
+        np.save(save_path + "cam_hp1.npy",cam1_hp)
+        print("   video 2 process Done")
 

@@ -116,7 +116,7 @@ class DataProcessor_offline():
             fft2d_in = separate_tx(radar_cube, 3, vx_axis=1, axis=0)
             #
             # fft2d_in = self.moving_average_clutter_reomval(fft2d_in ,self.moving_list,1)
-            fft2d_in,self.Y_last = self.delay_filter_src(fft2d_in,self.Y_last,a_weight=1)
+            fft2d_in,self.Y_last = self.delay_filter_src(fft2d_in,self.Y_last,a_weight=0.5)
 
 
             # (3) Doppler Processing
@@ -233,7 +233,7 @@ class DataProcessor_offline():
             # --- Peak Grouping
             detObj2D = mm.dsp.peak_grouping_along_doppler(detObj2DRaw, det_matrix, 16) # 16 = numDopplerBins
 
-            SNRThresholds2 = np.array([[2, 23], [10, 11.5], [35, 16]])
+            SNRThresholds2 = np.array([[0.5, 23], [1, 11.5], [35, 16]])
             peakValThresholds2 = np.array([[2, 275], [1, 400], [500, 0]])
             # SNRThresholds2 = np.array([[0, 15], [10, 16], [0 , 20]])
             # SNRThresholds2 = np.array([[0, 20], [10, 0], [0 , 0]])
