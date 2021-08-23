@@ -94,8 +94,8 @@ def Range_Angle(data, mode=0, padding_size=None, windowing=True):
 
     elif mode == 1:
         rai_abs = np.fft.fft(data, n=padding_size[2], axis=2)
-        rai_abs = np.fft.fftshift(np.abs(rai_abs), axes=2)
-        rai_abs = np.flip(rai_abs, axis=1)
+        rai_abs = np.fft.fftshift(rai_abs, axes=2)
+        rai_abs = np.flip(np.abs(rai_abs), axis=1)
         return rai_abs
 
     elif mode == 2:

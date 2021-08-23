@@ -1,4 +1,5 @@
-from real_time_process_3t4r import UdpListener, DataProcessor
+import DSP_2t4r
+from real_time_process_3t4r import UdpListener, DataProcessor, class_predict
 from CameraCapture import CamCapture
 from scipy import signal
 from radar_config import SerialConfig
@@ -16,10 +17,12 @@ import time
 import sys
 import socket
 import cv2
+import matplotlib.pyplot as plt
 import pyqtgraph.opengl as gl
 
 # -----------------------------------------------
 from app_layout_2t4r import Ui_MainWindow
+from tensorflow.keras.models import Sequential, load_model
 # -----------------------------------------------
 # config = '../radar_config/IWR1843_cfg_3t4r_v3.4_1.cfg'
 config = '../radar_config/xwr68xx_profile_2021_03_23T08_12_36_405.cfg'
@@ -28,6 +31,7 @@ config = '../radar_config/xwr68xx_profile_2021_03_23T08_12_36_405.cfg'
 # config = '../radar_config/xwr18xx_profile_2021_03_05T07_10_37_413.cfg'
 
 set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM10', BaudRate=115200)
+# set_radar = SerialConfig(name='ConnectRadar', CLIPort='COM13', BaudRate=115200)
 
 
 def send_cmd(code):
@@ -87,24 +91,41 @@ def send_cmd(code):
 
 
 def update_figure():
-    global count
+    global count, previous_status, is_hand_there, frame_buffer
     win_param = [8, 8, 3, 3]
     # cfar_rai = CA_CFAR(win_param, threshold=2.5, rd_size=[64, 181])
     if not RDIData.empty():
         rd = RDIData.get()
+        if ((np.mean(rd) - previous_status) > 0.9) and ((np.mean(rd) - previous_status) < 20):
+            if is_hand_there == 0:
+                print('There is a hand')
+                is_hand_there = 1
+                StartRecord()
+        savefilename.setText('Current Power:{}'.format(np.mean(rd)))
+        previous_status = np.mean(rd)
+        # if len(frame_buffer) != 8:
+        #     frame_buffer.append(rd)
+        # else:
+        #     frame_buffer.append(rd)
+        #     frame_buffer = frame_buffer[1:]
+        #     # print(np.shape(frame_buffer))
+
+
+
         # img_rdi.setImage(rd[:, :, 0].T, levels=[0, 2.6e4])
-        img_rdi.setImage(np.rot90(np.fft.fftshift(rd, axes=1), 3))
+        # img_rdi.setImage(np.rot90(np.fft.fftshift(rd, axes=1), 3))
+        img_rdi.setImage(rd)
         # img_rdi.setImage(np.abs(RDIData.get()[:, :, 0].T))
         # img_rai.setImage(cfar_rai(np.fliplr(RAIData.get()[0, :, :])).T)
         # ang_cuv.setData(rd[:, :, 0].sum(1))
 
-    if not RAIData.empty():
-        # xx = RAIData.get()[:, :, :].sum(0)
+    # if not RAIData.empty():
+        # xx = RAIData.get()
 
-        pd = RAIData.get()
-        pos = np.transpose(pd, [1, 0])
-        p13d.setData(pos=pos[:, :3], color=[1, 0.35, 0.02, 1], pxMode=True)
-        # img_rai.setImage((np.fliplr(np.flip(xx[36:-1,:], axis=0)).T))
+        # pd = RAIData.get()
+        # pos = np.transpose(pd, [1, 0])
+        # p13d.setData(pos=pos[:, :3], color=[1, 0.35, 0.02, 1], pxMode=True)
+        # img_rai.setImage(xx)
 
         # img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T)
         # np.save('../data/0105/rai_new' + str(count), xx[36:-1, :])
@@ -112,11 +133,18 @@ def update_figure():
         # img_rai.setImage(np.fliplr(np.flip(xx, axis=0)).T, levels=[1.2e4, 4e6])
         # angCurve.plot((np.fliplr(np.flip(xx, axis=0)).T)[:, 10:12].sum(1), clear=True)
 
-    if not CAMData.empty():
-        yy = CAMData.get()
-        # np.save('../data/img/' + str(count), yy)
-        img_cam.setImage(np.rot90(yy, -1))
+    # if not CAMData.empty():
+    #     yy = CAMData.get()
+    #     # np.save('../data/img/' + str(count), yy)
+    #     img_cam.setImage(np.rot90(yy, -1))
 
+    # print('record status', collector.record_status)
+    # print('save status', collector.status)
+    # print(collector.count_frame)
+    if collector.count_frame == 32:
+        collector.count_frame = 0
+        StopRecord()
+        is_hand_there = 0
     QtCore.QTimer.singleShot(1, update_figure)
     now = ptime.time()
     updateTime = now
@@ -144,12 +172,25 @@ def StartRecord():
 
 
 def StopRecord():
+    # set_radar.StopRadar()
     # processor.status = 0
     collector.status = 0
     # cam1.status = 0
     # cam2.status = 0
     print('Stop Record Time:', (time.ctime(time.time())))
     print('=======================================')
+    collector.record_status == 0
+    model_predict()
+
+    while not rawData.empty():
+        tmp = rawData.get()
+    while not cam_rawData.empty():
+        tmp = cam_rawData.get()
+    while not cam_rawData2.empty():
+        tmp = cam_rawData2.get()
+    while not BinData.empty():
+        tmp = BinData.get()
+
 
 
 def ConnectDca():
@@ -223,11 +264,12 @@ def SaveData():
         print('=======================================')
 
         img_rdi.clear()
-        img_cam.clear()
+        # img_cam.clear()
+
 
 
 def plot():
-    global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename, p13d
+    global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename, p13d, gesture_result
     # ---------------------------------------------------
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
@@ -250,6 +292,7 @@ def plot():
     savebtn = ui.pushButton_save
     dcabtn = ui.pushButton_DCA
     savefilename = ui.label_3
+    gesture_result = ui.label_5
     # savefilename = ui.textEdit
     # ---------------------------------------------------
     # lock the aspect ratio so pixels are always square
@@ -330,9 +373,77 @@ def plot():
     print('=======================================')
 
 
+def model_predict():
+    global realtime_data, model, data_mean, std
+    # print(realtime_data.empty())
+    if not realtime_data.empty():
+        # data_predict = realtime_data.get()
+        # print(np.shape(data_predict))
+        input_data = []
+
+        # for b_f in range(8):
+        #     rai_tmp = frame_buffer[b_f]
+        #     input_data.append(rai_tmp)
+
+        for f in range(32):
+            # data = data_predict[f]
+            data = realtime_data.get()
+            # if f < 8:
+            #     pass
+            # else:
+            # Range Angle Image
+            data = np.reshape(data, [-1, 4])
+            data = data[:, 0:2:] + 1j * data[:, 2::]
+            data = np.reshape(data, [16, 3, 4, 64])
+            cdata1 = data[:, :, 0, :]
+            cdata1 = np.transpose(cdata1, [0, 2, 1])
+            cdata2 = data[:, :, 1, :]
+            cdata2 = np.transpose(cdata2, [0, 2, 1])
+            cdata3 = data[:, :, 2, :]
+            cdata3 = np.transpose(cdata3, [0, 2, 1])
+            cdata4 = data[:, :, 3, :]
+            cdata4 = np.transpose(cdata4, [0, 2, 1])
+            data_rai = np.concatenate((cdata1, cdata2, cdata3, cdata4), axis=2)
+
+            rai_tmp = DSP_2t4r.Range_Angle(data_rai[:, :, 0:8], 1, [64, 64, 32])
+            rai_tmp = rai_tmp.sum(0).T
+            rai_tmp = rai_tmp[:, :32]
+            rai_tmp = np.log10(rai_tmp) * 20
+            rai_tmp = np.array(rai_tmp, dtype=np.float32)
+            # plt.figure()
+            # plt.imshow(rai_tmp)
+            # plt.savefig('E:\\NTUT-master\\NTUT-Thesis\\DATA\\IWR6843_RawData\\realtime\\' + str(f) + '.png')
+            # plt.close()
+            input_data.append(rai_tmp)
+
+        input_data = (input_data - data_mean) / std
+        # print('Original shape: ', np.shape(input_data))
+        input_data = np.reshape(input_data, [1, 32, 32, 32, 1])
+        # print('Input shape :', np.shape(input_data))
+        pred = model.predict(input_data)
+        label_cat = np.reshape(pred, [-1, 8])
+        frame_predict = np.argmax(label_cat, axis=1)
+        seq_predict = np.argmax(np.bincount(frame_predict))
+
+        print('Gesture is {}'.format(str(seq_predict + 1)))
+        print('Gesture is {}'.format(str(frame_predict + 1)))
+        gesture_result.setText('Gesture:{}'.format(seq_predict + 1))
+
+
+
+
+
 if __name__ == '__main__':
     print('======Real Time Data Capture Tool======')
+    model_path = 'E:/NTUT-master/NTUT-Thesis/DATA/IWR6843_RawData/result/2T4R_FoV70_BF_ratio_8_2/'
+    model = load_model(model_path + 'model.h5')
+    model.load_weights(model_path + '1_weights_0026.h5')
+    data_mean = np.load(model_path + 'mean.npy')
+    std = np.load(model_path + 'std.npy')
     count = 0
+    previous_status = 0
+    is_hand_there = 0
+    frame_buffer = []
     # Queue for access data
     BinData = Queue()
     RDIData = Queue()
@@ -342,6 +453,8 @@ if __name__ == '__main__':
     rawData = Queue()
     cam_rawData = Queue()
     cam_rawData2 = Queue()
+
+    realtime_data = Queue()
     # Radar config
     adc_sample = 64
     chirp = 16
@@ -361,17 +474,23 @@ if __name__ == '__main__':
     # sockConfig.bind(config_address)
 
 
-    # lock = threading.Lock()
-    # cam1 = CamCapture(1, 'First', 1, lock, CAMData, cam_rawData, mode=1)
+    lock = threading.Lock()
+    # cam1 = CamCapture(0, 'First', 0, lock, CAMData, cam_rawData, mode=1)
     # cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1)
 
-    collector = UdpListener('Listener', BinData, frame_length, address, buff_size, rawData)
-    processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, 0, "0105", status=0)
 
+    # cls_pred = class_predict('Predict', realtime_data, model)
+    collector = UdpListener('Listener', BinData, frame_length, address, buff_size, rawData, realtime_data)
+    processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, realtime_data, 0, "0105", status=0)
+
+    # pred_thread = threading.Thread(target=model_predict())
+    # pred_thread.start()
     # cam1.start()
     # cam2.start()
+
     collector.start()
     processor.start()
+    # cls_pred.start()
     plotIMAGE = threading.Thread(target=plot())
     plotIMAGE.start()
 
@@ -379,6 +498,8 @@ if __name__ == '__main__':
     # sockConfig.close()
     collector.join(timeout=1)
     processor.join(timeout=1)
+    # pred_thread.join(timeout=1)
+    # cls_pred.join(timeout=1)
     # cam1.close()
     # cam2.close()
 

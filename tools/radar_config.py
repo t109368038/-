@@ -13,7 +13,7 @@ class SerialConfig():
     def SendConfig(self, ConfigFileName):
         for line in open(ConfigFileName):
             self.CLIPort.write((line.rstrip('\r\n') + '\n').encode())
-            print(line)
+            # print(line)
             time.sleep(0.01)
 
     def StartRadar(self):
