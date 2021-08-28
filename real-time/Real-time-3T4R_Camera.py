@@ -19,7 +19,8 @@ import socket
 import cv2
 import matplotlib.pyplot as plt
 import pyqtgraph.opengl as gl
-
+import csv
+import os
 # -----------------------------------------------
 from app_layout_2t4r import Ui_MainWindow
 from tensorflow.keras.models import Sequential, load_model
@@ -91,7 +92,8 @@ def send_cmd(code):
 
 
 def update_figure():
-    global count, previous_status, is_hand_there, frame_buffer
+    global count, previous_status, is_hand_there, frame_buffer, predict_result, true_label
+    true_label = text_label.toPlainText()
     win_param = [8, 8, 3, 3]
     # cfar_rai = CA_CFAR(win_param, threshold=2.5, rd_size=[64, 181])
     if not RDIData.empty():
@@ -101,14 +103,17 @@ def update_figure():
                 print('There is a hand')
                 is_hand_there = 1
                 StartRecord()
+                count += 1
+
         savefilename.setText('Current Power:{}'.format(np.mean(rd)))
+        predict_count.setText('Predict Times:{}'.format(count))
         previous_status = np.mean(rd)
-        # if len(frame_buffer) != 8:
+        # if len(frame_buffer) != 4:
         #     frame_buffer.append(rd)
         # else:
         #     frame_buffer.append(rd)
         #     frame_buffer = frame_buffer[1:]
-        #     # print(np.shape(frame_buffer))
+            # print(np.shape(frame_buffer))
 
 
 
@@ -148,7 +153,7 @@ def update_figure():
     QtCore.QTimer.singleShot(1, update_figure)
     now = ptime.time()
     updateTime = now
-    count += 1
+
 
 
 def openradar():
@@ -190,7 +195,6 @@ def StopRecord():
         tmp = cam_rawData2.get()
     while not BinData.empty():
         tmp = BinData.get()
-
 
 
 def ConnectDca():
@@ -267,9 +271,8 @@ def SaveData():
         # img_cam.clear()
 
 
-
 def plot():
-    global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename, p13d, gesture_result
+    global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename, p13d, gesture_result, text_label, predict_count
     # ---------------------------------------------------
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
@@ -293,7 +296,8 @@ def plot():
     dcabtn = ui.pushButton_DCA
     savefilename = ui.label_3
     gesture_result = ui.label_5
-    # savefilename = ui.textEdit
+    predict_count = ui.label_4
+    text_label = ui.textEdit
     # ---------------------------------------------------
     # lock the aspect ratio so pixels are always square
     view_rdi.setAspectLocked(True)
@@ -374,14 +378,14 @@ def plot():
 
 
 def model_predict():
-    global realtime_data, model, data_mean, std
+    global realtime_data, model, data_mean, std, predict_result
     # print(realtime_data.empty())
     if not realtime_data.empty():
         # data_predict = realtime_data.get()
         # print(np.shape(data_predict))
         input_data = []
-
-        # for b_f in range(8):
+        raw_data = []
+        # for b_f in range(2):
         #     rai_tmp = frame_buffer[b_f]
         #     input_data.append(rai_tmp)
 
@@ -404,7 +408,7 @@ def model_predict():
             cdata4 = data[:, :, 3, :]
             cdata4 = np.transpose(cdata4, [0, 2, 1])
             data_rai = np.concatenate((cdata1, cdata2, cdata3, cdata4), axis=2)
-
+            raw_data.append(data_rai)
             rai_tmp = DSP_2t4r.Range_Angle(data_rai[:, :, 0:8], 1, [64, 64, 32])
             rai_tmp = rai_tmp.sum(0).T
             rai_tmp = rai_tmp[:, :32]
@@ -420,6 +424,9 @@ def model_predict():
         # print('Original shape: ', np.shape(input_data))
         input_data = np.reshape(input_data, [1, 32, 32, 32, 1])
         # print('Input shape :', np.shape(input_data))
+        np.save(output_path + str(count) + '_test_data.npy', input_data)
+        np.save(output_path + str(count) + '_raw_data.npy', raw_data)
+
         pred = model.predict(input_data)
         label_cat = np.reshape(pred, [-1, 8])
         frame_predict = np.argmax(label_cat, axis=1)
@@ -427,23 +434,29 @@ def model_predict():
 
         print('Gesture is {}'.format(str(seq_predict + 1)))
         print('Gesture is {}'.format(str(frame_predict + 1)))
-        gesture_result.setText('Gesture:{}'.format(seq_predict + 1))
-
-
-
+        gesture_result.setText('Gesture:{}      True Label:'.format(seq_predict + 1))
+        predict_result.append(frame_predict + 1)
 
 
 if __name__ == '__main__':
     print('======Real Time Data Capture Tool======')
+    output_path = 'E:/NTUT-master/NTUT-Thesis/DATA/IWR6843_RawData/result/real-time/'
+    if not os.path.isdir(output_path):
+        os.makedirs(output_path)
+
+    # ===============Select Model===============
     model_path = 'E:/NTUT-master/NTUT-Thesis/DATA/IWR6843_RawData/result/2T4R_FoV70_BF_ratio_8_2/'
     model = load_model(model_path + 'model.h5')
     model.load_weights(model_path + '1_weights_0026.h5')
     data_mean = np.load(model_path + 'mean.npy')
     std = np.load(model_path + 'std.npy')
+    # ==========================================
+    true_label = 0
     count = 0
     previous_status = 0
     is_hand_there = 0
     frame_buffer = []
+    predict_result = []
     # Queue for access data
     BinData = Queue()
     RDIData = Queue()
@@ -473,11 +486,9 @@ if __name__ == '__main__':
     # sockConfig = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     # sockConfig.bind(config_address)
 
-
     lock = threading.Lock()
     # cam1 = CamCapture(0, 'First', 0, lock, CAMData, cam_rawData, mode=1)
     # cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1)
-
 
     # cls_pred = class_predict('Predict', realtime_data, model)
     collector = UdpListener('Listener', BinData, frame_length, address, buff_size, rawData, realtime_data)
@@ -503,5 +514,11 @@ if __name__ == '__main__':
     # cam1.close()
     # cam2.close()
 
+    with open(output_path + 'True_Label' + true_label + '_result.csv', 'a', newline='') as file:
+        writer = csv.writer(file, delimiter=',')
+        writer.writerow(['Label', true_label])
+        writer.writerow(['Predict'])
+        writer.writerows(predict_result)
+    np.save(output_path + 'frame_predict.npy', predict_result)
     print("Program Close")
     sys.exit()

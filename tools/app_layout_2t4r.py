@@ -132,7 +132,6 @@ class Ui_MainWindow(object):
         self.pushButton_DCA.setFont(font)
         self.pushButton_DCA.setObjectName("pushButton_DCA")
 
-
         self.label_3 = QtWidgets.QLabel(self.centralwidget)
         self.label_3.setGeometry(QtCore.QRect(350, 670, 600, 30))
         font = QtGui.QFont()
@@ -156,7 +155,7 @@ class Ui_MainWindow(object):
         self.label_4.setObjectName("label_4")
 
         self.label_5 = QtWidgets.QLabel(self.centralwidget)
-        self.label_5.setGeometry(QtCore.QRect(650, 670, 600, 30))
+        self.label_5.setGeometry(QtCore.QRect(600, 670, 600, 30))
         font = QtGui.QFont()
         font.setFamily("微軟正黑體 Light")
         # font.setPointSize(14)
@@ -166,10 +165,10 @@ class Ui_MainWindow(object):
         self.label_5.setFont(font)
         self.label_5.setObjectName("label_5")
         #
-        # self.textEdit = QTextEdit(self.centralwidget)
-        # self.textEdit.setGeometry(QtCore.QRect(780, 670, 150, 30))
-        # self.textEdit.setFont(font)
-        # self.textEdit.setObjectName("textEdit_save")
+        self.textEdit = QTextEdit(self.centralwidget)
+        self.textEdit.setGeometry(QtCore.QRect(780, 670, 150, 30))
+        self.textEdit.setFont(font)
+        self.textEdit.setObjectName("textEdit_save")
 
 
         MainWindow.setCentralWidget(self.centralwidget)
@@ -187,8 +186,9 @@ class Ui_MainWindow(object):
         self.label_2.setText(_translate("MainWindow", "Range-Angle Image"))
         self.label_3.setText(_translate("MainWindow", "Current Power:"))
         self.label_6.setText(_translate("MainWindow", "Point Cloud"))
-        self.label_4.setText(_translate("MainWindow", "Current Frame:"))
-        self.label_5.setText(_translate("MainWindow", "Gesture:"))
+        self.label_4.setText(_translate("MainWindow", "Predict Times:"))
+        self.label_5.setText(_translate("MainWindow", "Gesture:       True Label:"))
+
 
         self.pushButton_exit.setText(_translate("MainWindow", "Exit"))
         self.pushButton_record.setText(_translate("MainWindow", "Record"))
@@ -196,6 +196,6 @@ class Ui_MainWindow(object):
         self.pushButton_stop_record.setText(_translate("MainWindow", "Stop Record"))
         self.pushButton_save.setText(_translate("MainWindow", "Save"))
         self.pushButton_DCA.setText(_translate("MainWindow", "Connect DCA1000"))
-        # self.textEdit.setText("Current Frame:")
+        self.textEdit.setText("Type Label Here")
 
 
