@@ -11,7 +11,7 @@ from tensorflow.keras.callbacks import LearningRateScheduler
 
 
 class UdpListener(th.Thread):
-    def __init__(self, name, bin_data, data_frame_length, data_address, buff_size, save_data, realtime_data, record_status=0):
+    def __init__(self, name, bin_data, data_frame_length, data_address, buff_size, save_data, realtime_data, record_status=0, frame_num=32):
         """
         :param name: str
                         Object name
@@ -38,6 +38,7 @@ class UdpListener(th.Thread):
         self.realtime_data = realtime_data
         self.status = 0
         self.record_status = record_status
+        self.frame_num = frame_num
 
     def run(self):
         # convert bytes to data type int16
@@ -67,7 +68,7 @@ class UdpListener(th.Thread):
                 if self.status == 1:
                     # print("Frame No.", self.count_frame)
 
-                    if self.count_frame < 32:
+                    if self.count_frame < self.frame_num:
                         self.save_data.put(np_data[0:self.frame_length])
                         self.realtime_data.put(np_data[0:self.frame_length])
                         self.count_frame += 1
@@ -78,6 +79,7 @@ class UdpListener(th.Thread):
                         self.record_status = 1
                         self.status = 0
                         self.count_frame = 0
+
                 self.bin_data.put(np_data[0:self.frame_length])
                 # remove one frame length data from array
                 np_data = np_data[self.frame_length:]

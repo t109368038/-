@@ -92,7 +92,7 @@ def send_cmd(code):
 
 
 def update_figure():
-    global count, previous_status, is_hand_there, frame_buffer, predict_result, true_label
+    global count, previous_status, is_hand_there, frame_buffer, predict_result, true_label, frame_num_1
     true_label = text_label.toPlainText()
     win_param = [8, 8, 3, 3]
     # cfar_rai = CA_CFAR(win_param, threshold=2.5, rd_size=[64, 181])
@@ -108,12 +108,12 @@ def update_figure():
         savefilename.setText('Current Power:{}'.format(np.mean(rd)))
         predict_count.setText('Predict Times:{}'.format(count))
         previous_status = np.mean(rd)
-        # if len(frame_buffer) != 4:
+        # if len(frame_buffer) != 8:
         #     frame_buffer.append(rd)
         # else:
         #     frame_buffer.append(rd)
         #     frame_buffer = frame_buffer[1:]
-            # print(np.shape(frame_buffer))
+        #     # print(np.shape(frame_buffer))
 
 
 
@@ -146,14 +146,13 @@ def update_figure():
     # print('record status', collector.record_status)
     # print('save status', collector.status)
     # print(collector.count_frame)
-    if collector.count_frame == 32:
+    if collector.count_frame == frame_num_1:
         collector.count_frame = 0
         StopRecord()
         is_hand_there = 0
     QtCore.QTimer.singleShot(1, update_figure)
     now = ptime.time()
     updateTime = now
-
 
 
 def openradar():
@@ -272,7 +271,7 @@ def SaveData():
 
 
 def plot():
-    global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename, p13d, gesture_result, text_label, predict_count
+    global img_rdi, img_rai, updateTime, view_text, count, angCurve, ang_cuv, img_cam, savefilename, p13d, gesture_result, text_label, predict_count, text_label
     # ---------------------------------------------------
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
@@ -378,7 +377,7 @@ def plot():
 
 
 def model_predict():
-    global realtime_data, model, data_mean, std, predict_result
+    global realtime_data, model, data_mean, std, predict_result, text_label
     # print(realtime_data.empty())
     if not realtime_data.empty():
         # data_predict = realtime_data.get()
@@ -395,6 +394,8 @@ def model_predict():
             # if f < 8:
             #     pass
             # else:
+            #     if f == 40:
+            #         break
             # Range Angle Image
             data = np.reshape(data, [-1, 4])
             data = data[:, 0:2:] + 1j * data[:, 2::]
@@ -424,28 +425,41 @@ def model_predict():
         # print('Original shape: ', np.shape(input_data))
         input_data = np.reshape(input_data, [1, 32, 32, 32, 1])
         # print('Input shape :', np.shape(input_data))
-        np.save(output_path + str(count) + '_test_data.npy', input_data)
-        np.save(output_path + str(count) + '_raw_data.npy', raw_data)
+
+
+        # save file
+        np.save(output_path + text_label.toPlainText() + '_' + str(count) + '_test_data.npy', input_data)
+        np.save(output_path + text_label.toPlainText() + '_' + str(count) + '_raw_data.npy', raw_data)
 
         pred = model.predict(input_data)
         label_cat = np.reshape(pred, [-1, 8])
         frame_predict = np.argmax(label_cat, axis=1)
-        seq_predict = np.argmax(np.bincount(frame_predict))
+        confidence_predict = []
+        for z in range(32):
+            # print(label_cat[z, frame_predict[z]])
+            if (label_cat[z, frame_predict[z]]) > 0.8:
+                confidence_predict.append(frame_predict[z])
+                # print(frame_predict[z])
 
+        seq_predict = np.argmax(np.bincount(frame_predict))
         print('Gesture is {}'.format(str(seq_predict + 1)))
-        print('Gesture is {}'.format(str(frame_predict + 1)))
+        # print('*' * 20)
+        print('Gesture is {}'.format(str(frame_predict + 1)) + 'Count:', len(frame_predict))
+        # print('*' * 20)
+        # print('Confidence 0.8 Gesture is {}'.format(str(np.array(confidence_predict) + 1)) + 'Count:', len(confidence_predict))
+        # print('*' * 20)
         gesture_result.setText('Gesture:{}      True Label:'.format(seq_predict + 1))
         predict_result.append(frame_predict + 1)
 
 
 if __name__ == '__main__':
     print('======Real Time Data Capture Tool======')
-    output_path = 'E:/NTUT-master/NTUT-Thesis/DATA/IWR6843_RawData/result/real-time/'
+    output_path = 'E:/NTUT-master/NTUT-Thesis/DATA/IWR6843_RawData/result/real-time/velocity_offset/'
     if not os.path.isdir(output_path):
         os.makedirs(output_path)
 
     # ===============Select Model===============
-    model_path = 'E:/NTUT-master/NTUT-Thesis/DATA/IWR6843_RawData/result/2T4R_FoV70_BF_ratio_8_2/'
+    model_path = 'E:/NTUT-master/NTUT-Thesis/DATA/IWR6843_RawData/result/MODEL/2T4R_FoV70_BF_ratio_8_2/'
     model = load_model(model_path + 'model.h5')
     model.load_weights(model_path + '1_weights_0026.h5')
     data_mean = np.load(model_path + 'mean.npy')
@@ -469,6 +483,7 @@ if __name__ == '__main__':
 
     realtime_data = Queue()
     # Radar config
+    frame_num_1 = 32
     adc_sample = 64
     chirp = 16
     tx_num = 3
@@ -491,7 +506,7 @@ if __name__ == '__main__':
     # cam2 = CamCapture(0, 'Second', 0, lock, CAMData2, cam_rawData2, mode=1)
 
     # cls_pred = class_predict('Predict', realtime_data, model)
-    collector = UdpListener('Listener', BinData, frame_length, address, buff_size, rawData, realtime_data)
+    collector = UdpListener('Listener', BinData, frame_length, address, buff_size, rawData, realtime_data, frame_num=frame_num_1)
     processor = DataProcessor('Processor', radar_config, BinData, RDIData, RAIData, realtime_data, 0, "0105", status=0)
 
     # pred_thread = threading.Thread(target=model_predict())
@@ -514,11 +529,11 @@ if __name__ == '__main__':
     # cam1.close()
     # cam2.close()
 
-    with open(output_path + 'True_Label' + true_label + '_result.csv', 'a', newline='') as file:
+    with open(output_path + 'True_Label_' + true_label + '_result.csv', 'a', newline='') as file:
         writer = csv.writer(file, delimiter=',')
         writer.writerow(['Label', true_label])
         writer.writerow(['Predict'])
         writer.writerows(predict_result)
-    np.save(output_path + 'frame_predict.npy', predict_result)
+    np.save(output_path + true_label + '_' + 'frame_predict.npy', predict_result)
     print("Program Close")
     sys.exit()
